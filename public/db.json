@@ -1,0 +1,191 @@
+{
+  "pids": [
+    {
+      "id": "1",
+      "fileName": "Process_Flow_Diagram_Rev_A.pdf",
+      "uploadDate": "2024-05-20",
+      "fileSize": "2.4 MB",
+      "uploadedBy": "John Doe",
+      "status": "processed",
+      "documentType": "PID",
+      "extractedData": {
+        "Document Title": "Process Flow Diagram Rev A",
+        "Project Number": "PRJ-2024-001",
+        "Drawing Number": "PID-001-Rev-A",
+        "Process Unit": "Distillation Column",
+        "Design Pressure": "150 PSI",
+        "Design Temperature": "250°F",
+        "Revision Date": "2024-05-20",
+        "Approved By": "Chief Engineer"
+      }
+    },
+    {
+      "id": "2",
+      "fileName": "Control_System_Layout.pdf",
+      "uploadDate": "2024-05-19",
+      "fileSize": "1.8 MB",
+      "uploadedBy": "Jane Smith",
+      "status": "processed",
+      "documentType": "PID",
+      "extractedData": {
+        "Document Title": "Control System Layout",
+        "Project Number": "PRJ-2024-002",
+        "Drawing Number": "PID-002-Rev-B",
+        "Process Unit": "Reactor System",
+        "Control Philosophy": "DCS Based",
+        "Safety Systems": "SIS Level 2",
+        "Revision Date": "2024-05-19",
+        "Approved By": "Control Engineer"
+      }
+    }
+  ],
+  "datasheets": [
+    {
+      "id": "1",
+      "fileName": "Pump_Specifications_XYZ123.pdf",
+      "uploadDate": "2024-05-21",
+      "fileSize": "3.2 MB",
+      "uploadedBy": "Engineering Team",
+      "status": "processed",
+      "documentType": "Datasheet",
+      "extractedData": {
+        "Equipment Tag": "P-101",
+        "Equipment Type": "Centrifugal Pump",
+        "Model Number": "XYZ-123-456",
+        "Manufacturer": "Industrial Pumps Inc",
+        "Flow Rate": "500 GPM",
+        "Total Head": "150 ft",
+        "Suction Pressure": "50 PSI",
+        "Discharge Pressure": "200 PSI",
+        "Material": "Stainless Steel 316L",
+        "Motor Power": "25 HP",
+        "Voltage": "460V, 3-Phase"
+      }
+    },
+    {
+      "id": "2",
+      "fileName": "Valve_Technical_Data_ABC456.pdf",
+      "uploadDate": "2024-05-20",
+      "fileSize": "1.9 MB",
+      "uploadedBy": "Technical Lead",
+      "status": "processed",
+      "documentType": "Datasheet",
+      "extractedData": {
+        "Equipment Tag": "CV-201",
+        "Equipment Type": "Control Valve",
+        "Model Number": "ABC-456-789",
+        "Manufacturer": "Valve Solutions Corp",
+        "Size": "6 inch",
+        "Pressure Class": "Class 300",
+        "Material": "Carbon Steel",
+        "Cv Value": "85",
+        "Actuator Type": "Pneumatic",
+        "Fail Position": "Fail Closed"
+      }
+    }
+  ],
+  "chats": [
+    {
+      "id": "1",
+      "title": "PID Analysis Discussion",
+      "createdAt": "2024-05-24T10:30:00Z",
+      "lastMessage": "Can you explain the pressure ratings in diagram PID-001-Rev-A?",
+      "messages": [
+        {
+          "id": "1",
+          "content": "Hello! I need help analyzing the Process Flow Diagram Rev A.",
+          "sender": "user",
+          "timestamp": "2024-05-24T10:30:00Z"
+        },
+        {
+          "id": "2",
+          "content": "I'd be happy to help you analyze the Process Flow Diagram Rev A. I can see it's for a Distillation Column with a design pressure of 150 PSI and design temperature of 250°F. What specific aspects would you like me to explain?",
+          "sender": "assistant",
+          "timestamp": "2024-05-24T10:31:15Z"
+        },
+        {
+          "id": "3",
+          "content": "Can you explain the pressure ratings in diagram PID-001-Rev-A?",
+          "sender": "user",
+          "timestamp": "2024-05-24T10:32:30Z"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Pump Specifications Query",
+      "createdAt": "2024-05-23T14:15:00Z",
+      "lastMessage": "What's the motor power requirement for pump P-101?",
+      "messages": [
+        {
+          "id": "1",
+          "content": "I'm looking at the pump datasheet for P-101. What's the motor power requirement?",
+          "sender": "user",
+          "timestamp": "2024-05-23T14:15:00Z"
+        },
+        {
+          "id": "2",
+          "content": "Based on the pump specifications for P-101, the motor power requirement is 25 HP. This centrifugal pump operates at 460V, 3-Phase and handles a flow rate of 500 GPM with a total head of 150 ft.",
+          "sender": "assistant",
+          "timestamp": "2024-05-23T14:16:20Z"
+        },
+        {
+          "id": "3",
+          "content": "What's the motor power requirement for pump P-101?",
+          "sender": "user",
+          "timestamp": "2024-05-23T14:17:45Z"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": "Control Valve Discussion",
+      "createdAt": "2024-05-22T09:45:00Z",
+      "lastMessage": "h",
+      "messages": [
+        {
+          "id": "1",
+          "content": "Can you tell me about the control valve CV-201?",
+          "sender": "user",
+          "timestamp": "2024-05-22T09:45:00Z"
+        },
+        {
+          "id": "2",
+          "content": "Control valve CV-201 is a 6-inch pneumatic actuated valve manufactured by Valve Solutions Corp. It has a Cv value of 85, is Class 300 pressure rated, made of Carbon Steel, and is configured to fail closed. The model number is ABC-456-789.",
+          "sender": "assistant",
+          "timestamp": "2024-05-22T09:46:30Z"
+        },
+        {
+          "id": "3",
+          "content": "What does 'fail closed' mean in this context?",
+          "sender": "user",
+          "timestamp": "2024-05-22T09:47:15Z"
+        },
+        {
+          "id": "4",
+          "content": "'Fail closed' means that if there's a loss of power or control signal to the pneumatic actuator, the valve will automatically move to the closed position. This is a safety feature to prevent uncontrolled flow in case of system failure.",
+          "sender": "assistant",
+          "timestamp": "2024-05-22T09:48:00Z"
+        },
+        {
+          "id": "5",
+          "content": "Perfect, thank you for the detailed explanation!",
+          "sender": "user",
+          "timestamp": "2024-05-22T09:48:30Z"
+        },
+        {
+          "id": "1748047385604",
+          "content": "h",
+          "sender": "user",
+          "timestamp": "2025-05-24T00:43:05.604Z"
+        },
+        {
+          "id": "1748047385606",
+          "content": "I understand your question: \"h\". Based on the available technical documentation, I can help you analyze the data. Please let me know if you need specific information about any equipment or process parameters.",
+          "sender": "assistant",
+          "timestamp": "2025-05-24T00:43:05.605Z"
+        }
+      ]
+    }
+  ]
+}
