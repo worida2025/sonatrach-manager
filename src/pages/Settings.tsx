@@ -6,36 +6,21 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { apiService } from '@/lib/api';
 
 const Settings: React.FC = () => {
   const [modelName, setModelName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
-  const { token } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
   }, []);
-
   const fetchSettings = async () => {
     try {
-      const response = await fetch('http://localhost:8000/admin/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setModelName(data.model_name);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch settings",
-          variant: "destructive",
-        });
-      }
+      const data = await apiService.getSettings();
+      setModelName(data.model_name);
     } catch (error) {
       toast({
         title: "Error",
@@ -46,33 +31,16 @@ const Settings: React.FC = () => {
       setIsFetching(false);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/admin/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ai_model_name: modelName }),
+      await apiService.updateSettings(modelName);
+      toast({
+        title: "Success",
+        description: "Settings updated successfully",
       });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Settings updated successfully",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update settings",
-          variant: "destructive",
-        });
-      }
     } catch (error) {
       toast({
         title: "Error",

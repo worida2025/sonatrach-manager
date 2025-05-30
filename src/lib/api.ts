@@ -128,6 +128,32 @@ class ApiService {
 
     return response.json();
   }
+
+  async getSettings(): Promise<{ model_name: string }> {
+    const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch settings');
+    }
+
+    return response.json();
+  }
+
+  async updateSettings(aiModelName: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ ai_model_name: aiModelName }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update settings');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiService = new ApiService();
