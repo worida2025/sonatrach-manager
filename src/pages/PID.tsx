@@ -103,24 +103,46 @@ const PID = () => {
         title: "File Selected",
         description: `${file.name} is ready for processing`,
       })
+    }  }
+
+  const handleFieldsExtracted = (newFields: Record<string, string>) => {
+    setExtractedData(prev => ({ ...prev, ...newFields }))
+    
+    // Save the updated fields to the backend if we have a document
+    if (selectedDocument) {
+      handleSaveData({ ...extractedData, ...newFields })
+    }
+  }
+
+  const handleFieldDelete = async (fieldKey: string) => {
+    if (!selectedDocument) return
+    
+    try {
+      await apiService.deleteField(selectedDocument.id, fieldKey)
+      
+      // Update local state
+      setExtractedData(prev => {
+        const updated = { ...prev }
+        delete updated[fieldKey]
+        return updated
+      })
+      
+      toast({
+        title: "Field Deleted",
+        description: `Field "${fieldKey}" has been deleted successfully`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error Deleting Field",
+        description: error instanceof Error ? error.message : "Failed to delete field",
+        variant: "destructive",
+      })
     }
   }
   const handleDataExtracted = (data: Record<string, string>) => {
     setExtractedData(data)
     // Reload documents after successful upload
     loadDocuments()
-  }
-
-  const handleFieldsExtracted = (newFields: Record<string, string>) => {
-    setExtractedData(prev => ({ ...prev, ...newFields }))
-  }
-
-  const handleFieldDelete = (fieldKey: string) => {
-    setExtractedData(prev => {
-      const updated = { ...prev }
-      delete updated[fieldKey]
-      return updated
-    })
   }
   const handleSaveData = async (data: Record<string, string>) => {
     try {
@@ -240,8 +262,8 @@ const PID = () => {
                 onSave={handleSaveData}
                 onFieldDelete={handleFieldDelete}
               />
-              <DocumentViewer document={selectedDocument} />
-              <DocumentChat 
+              <DocumentViewer document={selectedDocument} />              <DocumentChat
+                key={selectedDocument.id}
                 documentId={selectedDocument.id}
                 onFieldsExtracted={handleFieldsExtracted}
               />

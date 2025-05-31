@@ -86,6 +86,20 @@ class ChatResponse(BaseModel):
     response: str
     extracted_fields: Optional[Dict[str, str]] = None
 
+class UpdateDocumentFieldsRequest(BaseModel):
+    extracted_data: Dict[str, str]
+
+class ChatMessage(BaseModel):
+    id: str
+    content: str
+    sender: str
+    timestamp: str
+    extracted_fields: Optional[Dict[str, str]] = None
+
+class SaveChatHistoryRequest(BaseModel):
+    document_id: str
+    messages: List[ChatMessage]
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -380,6 +394,88 @@ def extract_service_info(text: str) -> Dict[str, str]:
     
     return service_data
 
+def extract_single_field_with_ai(document_text: str, query: str) -> Dict[str, str]:
+    """Use Gemini AI to extract a single specific field and return it as a dictionary"""
+    prompt = f"""
+    You are an expert at extracting specific information from engineering documents.
+    
+    Document content:
+    {document_text}
+    
+    Task: {query}
+    
+    Extract ONLY ONE field based on the user's request. Determine an appropriate field name and extract its value.
+    
+    Respond in the following JSON format:
+    {{"field_name": "value"}}
+    
+    For example:
+    - If asked for "operating temperature", respond: {{"Operating Temperature": "150°C"}}
+    - If asked for "pressure rating", respond: {{"Pressure Rating": "300 PSI"}}
+    - If asked for "equipment ID", respond: {{"Equipment ID": "P-101"}}
+    
+    If the information is not found, respond: {{"Error": "Information not found in document"}}
+    
+    Return only the JSON object, no other text.
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+        
+        # Try to parse as JSON
+        import json
+        try:
+            # Remove any markdown formatting
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            elif response_text.startswith('```'):
+                response_text = response_text.replace('```', '').strip()
+            
+            parsed_response = json.loads(response_text)
+            
+            # If it's a valid dictionary with one key-value pair, return it
+            if isinstance(parsed_response, dict) and len(parsed_response) == 1:
+                return parsed_response
+            elif isinstance(parsed_response, dict) and len(parsed_response) > 1:
+                # Take only the first field
+                first_key = list(parsed_response.keys())[0]
+                return {first_key: parsed_response[first_key]}
+            else:
+                # Fallback if parsing fails
+                return {"Extracted Field": response_text}
+                
+        except json.JSONDecodeError:
+            # If JSON parsing fails, try to extract field name and value manually
+            lines = response_text.split('\n')
+            for line in lines:
+                if ':' in line:
+                    parts = line.split(':', 1)
+                    if len(parts) == 2:
+                        field_name = parts[0].strip().strip('"')
+                        field_value = parts[1].strip().strip('"')
+                        return {field_name: field_value}
+            
+            # Final fallback
+            return {"Extracted Information": response_text}
+            
+    except Exception as e:
+        return {"Error": f"Error extracting field: {str(e)}"}
+
+def load_chat_history():
+    """Load chat history from JSON file"""
+    chat_history_file = "chat_history.json"
+    if os.path.exists(chat_history_file):
+        with open(chat_history_file, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_chat_history(chat_history):
+    """Save chat history to JSON file"""
+    chat_history_file = "chat_history.json"
+    with open(chat_history_file, 'w') as f:
+        json.dump(chat_history, f, indent=2)
+
 # Authentication routes
 @app.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
@@ -588,8 +684,7 @@ async def chat_with_document(document_id: str, request: ChatRequest, current_use
         document_text = extract_text_from_pdf(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading document: {str(e)}")
-    
-    # Create prompt for Gemini
+      # Create prompt for Gemini
     prompt = f"""
     You are an expert at analyzing engineering documents, particularly P&ID (Process and Instrumentation Diagrams) and technical datasheets.
     
@@ -598,20 +693,19 @@ async def chat_with_document(document_id: str, request: ChatRequest, current_use
     
     User question: {request.message}
     
-    Please provide a helpful response based on the document content. If the user is asking about specific fields or data extraction, 
-    help them understand what information is available in the document.
+    Important: If the user is asking to extract a field, extract ONLY ONE field. Provide a helpful response and if extracting a field, 
+    provide the extracted information in a clear format.
     
-    If the user asks to extract a specific field, provide the extracted information in a clear format.
+    If you extract a field, the response should clearly identify the field name and its value.
     """
     
     try:
         response = model.generate_content(prompt)
         ai_response = response.text
-        
-        # Check if user is asking to extract a specific field
+          # Check if user is asking to extract a specific field
         extracted_fields = None
         if any(keyword in request.message.lower() for keyword in ['extract', 'find', 'get', 'show me']):
-            extracted_fields = extract_field_with_ai(document_text, request.message)
+            extracted_fields = extract_single_field_with_ai(document_text, request.message)
         
         return JSONResponse(content={
             "status": "success",
@@ -700,6 +794,34 @@ async def delete_field(document_id: str, field_name: str):
     return JSONResponse(content={
         "status": "success",
         "message": f"Field '{field_name}' deleted successfully"
+    })
+
+@app.put("/documents/{document_id}/fields")
+async def update_document_fields(document_id: str, request: UpdateDocumentFieldsRequest, admin_user: dict = Depends(require_admin)):
+    """Update the extracted data fields for a document (Admin only)"""
+    documents = load_documents()
+    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Update the document's extracted data
+    if 'extracted_data' not in document:
+        document['extracted_data'] = {}
+    
+    document['extracted_data'].update(request.extracted_data)
+    
+    # Save the updated document
+    for i, doc in enumerate(documents):
+        if doc['id'] == document_id:
+            documents[i] = document
+            break
+    
+    save_documents(documents)
+    
+    return JSONResponse(content={
+        "status": "success",
+        "message": "Document fields updated successfully"
     })
 
 def extract_field_with_ai(document_text: str, query: str) -> str:
@@ -816,6 +938,33 @@ def find_relevant_data(all_extracted_data: dict, question: str) -> dict:
                 relevant_data[document][field] = value
     
     return relevant_data if relevant_data else None
+
+@app.get("/documents/{document_id}/chat-history")
+async def get_chat_history(document_id: str, current_user: dict = Depends(get_current_user)):
+    """Get chat history for a specific document"""
+    chat_history = load_chat_history()
+    document_chat = chat_history.get(document_id, [])
+    
+    return JSONResponse(content={
+        "status": "success",
+        "messages": document_chat
+    })
+
+@app.post("/documents/{document_id}/save-chat")
+async def save_document_chat_history(document_id: str, request: SaveChatHistoryRequest, current_user: dict = Depends(get_current_user)):
+    """Save chat history for a specific document"""
+    chat_history = load_chat_history()
+    
+    # Convert Pydantic models to dict
+    messages_dict = [msg.dict() for msg in request.messages]
+    chat_history[document_id] = messages_dict
+    
+    save_chat_history(chat_history)
+    
+    return JSONResponse(content={
+        "status": "success",
+        "message": "Chat history saved successfully"
+    })
 
 if __name__ == "__main__":
     import uvicorn

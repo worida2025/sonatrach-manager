@@ -129,6 +129,32 @@ class ApiService {
     return response.json();
   }
 
+  async getChatHistory(documentId: string): Promise<{ status: string; messages: any[] }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/chat-history`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch chat history');
+    }
+
+    return response.json();
+  }
+
+  async saveChatHistory(documentId: string, messages: any[]): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/save-chat`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ document_id: documentId, messages }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save chat history');
+    }
+
+    return response.json();
+  }
+
   async getSettings(): Promise<{ model_name: string }> {
     const response = await fetch(`${API_BASE_URL}/admin/settings`, {
       headers: this.getAuthHeaders(),
@@ -154,9 +180,8 @@ class ApiService {
 
     return response.json();
   }
-
   async updateDocumentData(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/data`, {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ extracted_data: extractedData }),
@@ -164,6 +189,33 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error('Failed to update document data');
+    }
+
+    return response.json();
+  }
+
+  async updateDocumentFields(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ extracted_data: extractedData }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update document fields');
+    }
+
+    return response.json();
+  }
+
+  async deleteField(documentId: string, fieldName: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields/${encodeURIComponent(fieldName)}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete field');
     }
 
     return response.json();

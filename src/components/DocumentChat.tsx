@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,21 +24,65 @@ interface DocumentChatProps {
 
 export function DocumentChat({ documentId, onFieldsExtracted }: DocumentChatProps) {
   const [newMessage, setNewMessage] = useState('')
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      content: `Hello! I can help you extract specific fields from this document. Just ask me to extract any field you need, for example:
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+
+  // Load chat history when component mounts or documentId changes
+  useEffect(() => {
+    loadChatHistory()
+  }, [documentId])
+
+  const loadChatHistory = async () => {
+    try {
+      setIsLoadingHistory(true)
+      const response = await apiService.getChatHistory(documentId)
+      
+      if (response.messages && response.messages.length > 0) {
+        setMessages(response.messages)
+      } else {
+        // Set default welcome message if no history exists
+        setMessages([{
+          id: 'welcome',
+          content: `Hello! I can help you extract specific fields from this document. Just ask me to extract ONE field at a time, for example:
 
 • "Extract the operating temperature"
-• "Find the pressure rating"
+• "Find the pressure rating"  
 • "Get the equipment ID number"
-• "Extract all valve specifications"
+• "Extract the pump model"
 
-What field would you like me to extract?`,
-      sender: 'assistant',
-      timestamp: new Date().toISOString()
+Please specify ONE field per message. What field would you like me to extract?`,
+          sender: 'assistant',
+          timestamp: new Date().toISOString()
+        }])
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error)
+      // Set default welcome message on error
+      setMessages([{
+        id: 'welcome',
+        content: `Hello! I can help you extract specific fields from this document. Just ask me to extract ONE field at a time, for example:
+
+• "Extract the operating temperature"
+• "Find the pressure rating"  
+• "Get the equipment ID number"
+• "Extract the pump model"
+
+Please specify ONE field per message. What field would you like me to extract?`,
+        sender: 'assistant',
+        timestamp: new Date().toISOString()
+      }])
+    } finally {
+      setIsLoadingHistory(false)
     }
-  ])
+  }
+
+  const saveChatHistory = async (updatedMessages: Message[]) => {
+    try {
+      await apiService.saveChatHistory(documentId, updatedMessages)
+    } catch (error) {
+      console.error('Error saving chat history:', error)
+    }
+  }
 
   // Send message mutation for document-specific chat
   const sendMessageMutation = useMutation({
@@ -50,25 +94,29 @@ What field would you like me to extract?`,
         id: Date.now().toString(),
         content: messageText,
         sender: 'user',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString()      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: response.response,
         sender: 'assistant',
         timestamp: new Date().toISOString(),
-        extracted_fields: response.extracted_fields
-      }
+        extracted_fields: response.extracted_fields      }
 
-      setMessages(prev => [...prev, userMessage, assistantMessage])
+      const updatedMessages = [...messages, userMessage, assistantMessage]
+      setMessages(updatedMessages)
 
-      // If fields were extracted, pass them to parent component
+      // Save chat history
+      saveChatHistory(updatedMessages)// If fields were extracted, pass them to parent component
       if (response.extracted_fields && Object.keys(response.extracted_fields).length > 0) {
-        onFieldsExtracted(response.extracted_fields)
+        // Only take the first field to ensure single field extraction
+        const fieldEntries = Object.entries(response.extracted_fields)
+        const singleField = fieldEntries.length > 0 ? { [fieldEntries[0][0]]: fieldEntries[0][1] } : {}
+        
+        onFieldsExtracted(singleField)
         toast({
-          title: "Fields Extracted",
-          description: `${Object.keys(response.extracted_fields).length} field(s) extracted and added to the document data`,
+          title: "Field Extracted",
+          description: `Field "${fieldEntries[0][0]}" extracted and added to the document data`,
         })
       }
     },
@@ -101,11 +149,18 @@ What field would you like me to extract?`,
         <MessageCircle className="h-5 w-5 text-primary" />
         <CardTitle className="text-lg">Extract Fields</CardTitle>
       </CardHeader>
-      
-      <CardContent className="flex flex-col flex-1 gap-4 p-4">
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
-            {messages.map((message) => (
+        <CardContent className="flex flex-col flex-1 gap-4 p-4">
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center flex-1">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              Loading chat history...
+            </div>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4">{messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex gap-3 ${
@@ -158,32 +213,33 @@ What field would you like me to extract?`,
                     <User className="h-4 w-4 text-blue-600" />
                   </div>
                 )}
+              </div>            ))}
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </ScrollArea>
 
-        <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me to extract specific fields..."
-            disabled={sendMessageMutation.isPending}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={sendMessageMutation.isPending || !newMessage.trim()}
-            size="sm"
-          >
-            {sendMessageMutation.isPending ? (
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+            <div className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask me to extract ONE specific field..."
+                disabled={sendMessageMutation.isPending}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={sendMessageMutation.isPending || !newMessage.trim()}
+                size="sm"
+              >
+                {sendMessageMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )
