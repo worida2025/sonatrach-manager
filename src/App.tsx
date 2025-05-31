@@ -30,44 +30,46 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/*" element={
-              <ProtectedRoute>
+            <Route path="/*" element={              <ProtectedRoute>
                 <SidebarProvider>
-                  <div className="min-h-screen flex w-full">
+                  <div className="min-h-screen flex w-full overflow-hidden">
                     <AppSidebar />
-                    <main className="flex-1">
-                      <div className="p-2 border-b">
+                    <main className="flex-1 flex flex-col overflow-hidden">
+                      <div className="flex-shrink-0 p-2 border-b bg-background">
                         <SidebarTrigger />
                       </div>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />                        <Route path="/pid" element={
-                          <ProtectedRoute requiredRole="admin">
-                            <PID />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/pid/history" element={
-                          <ProtectedRoute requiredRole="admin">
-                            <PIDHistory />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/pid/document/:id" element={
-                          <ProtectedRoute requiredRole="admin">
-                            <PID />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/datasheets" element={
-                          <ProtectedRoute requiredRole="admin">
-                            <Datasheets />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/settings" element={
-                          <ProtectedRoute requiredRole="admin">
-                            <Settings />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/chat" element={<Chat />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
+                      <div className="flex-1 overflow-hidden">
+                        <Routes>
+                          <Route path="/" element={<Dashboard />} />
+                          <Route path="/pid" element={
+                            <ProtectedRoute requiredRole="admin">
+                              <PID />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/pid/history" element={
+                            <ProtectedRoute requiredRole="admin">
+                              <PIDHistory />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/pid/document/:id" element={
+                            <ProtectedRoute requiredRole="admin">
+                              <PID />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/datasheets" element={
+                            <ProtectedRoute requiredRole="admin">
+                              <Datasheets />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/settings" element={
+                            <ProtectedRoute requiredRole="admin">
+                              <Settings />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/chat" element={<Chat />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </div>
                     </main>
                   </div>
                 </SidebarProvider>

@@ -136,8 +136,7 @@ const PID = () => {
         
         toast({
           title: "Data Saved",
-          description: "Document data has been successfully saved",
-        })
+          description: "Document data has been successfully saved",        })
       }
     } catch (error) {
       toast({
@@ -145,110 +144,159 @@ const PID = () => {
         description: "Failed to save document data",
         variant: "destructive",
       })
-    }  }
+    }
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Process & Instrumentation Diagrams</h1>
-            <p className="text-muted-foreground">Upload and manage PID documents with automated data extraction</p>
-          </div>
-        </div>
-        {!documentId && (
-          <Button
-            variant="outline"
-            onClick={() => navigate('/pid/history')}
-            className="flex items-center gap-2"
-          >
-            <History className="h-4 w-4" />
-            View History
-          </Button>
-        )}      </div>
-
-      {documentId && selectedDocument ? (
-        // Document view - no tabs, direct content
-        <div className="space-y-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/pid/history')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to History
-            </Button>
-            <div>
-              <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
-              <p className="text-sm text-muted-foreground">
-                Uploaded: {new Date(selectedDocument.upload_date).toLocaleDateString()}
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header Section */}
+      <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-background">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+                Process & Instrumentation Diagrams
+              </h1>
+              <p className="text-sm text-muted-foreground hidden sm:block">
+                Upload and manage PID documents with automated data extraction
               </p>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
-            {/* Document Preview and Extracted Data Tabs */}
-            <Tabs defaultValue="preview" className="flex flex-col h-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="preview">Document Preview</TabsTrigger>
-                <TabsTrigger value="data">Extracted Data</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="preview" className="flex-1 mt-4">
-                <DocumentViewer document={selectedDocument} />
-              </TabsContent>
-              
-              <TabsContent value="data" className="flex-1 mt-4">
-                <DataExtraction
-                  data={extractedData}
-                  onSave={handleSaveData}
-                  onFieldDelete={handleFieldDelete}
-                />
+          {!documentId && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/pid/history')}
+              className="flex items-center gap-2 flex-shrink-0"
+              size="sm"
+            >
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">View History</span>
+              <span className="sm:hidden">History</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {documentId && selectedDocument ? (
+          // Document view - responsive layout
+          <div className="h-full flex flex-col">
+            {/* Document Header */}
+            <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-background">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/pid/history')}
+                  className="flex items-center gap-2 self-start"
+                  size="sm"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Back to History</span>
+                  <span className="sm:hidden">Back</span>
+                </Button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">
+                    {selectedDocument.filename}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Uploaded: {new Date(selectedDocument.upload_date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Document Content Grid */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 sm:p-6">
+                {/* Left Panel - Document Preview and Data */}
+                <div className="h-full flex flex-col min-h-0">
+                  <Tabs defaultValue="preview" className="h-full flex flex-col">
+                    <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                      <TabsTrigger value="preview" className="text-xs sm:text-sm">
+                        <span className="hidden sm:inline">Document Preview</span>
+                        <span className="sm:hidden">Preview</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="data" className="text-xs sm:text-sm">
+                        <span className="hidden sm:inline">Extracted Data</span>
+                        <span className="sm:hidden">Data</span>
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="preview" className="flex-1 mt-4 overflow-hidden min-h-0">
+                      <DocumentViewer document={selectedDocument} />
+                    </TabsContent>
+                    
+                    <TabsContent value="data" className="flex-1 mt-4 overflow-hidden min-h-0">
+                      <DataExtraction
+                        data={extractedData}
+                        onSave={handleSaveData}
+                        onFieldDelete={handleFieldDelete}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+                
+                {/* Right Panel - Document Chat */}
+                <div className="h-full min-h-0">
+                  <DocumentChat
+                    key={selectedDocument.id}
+                    documentId={selectedDocument.id}
+                    onFieldsExtracted={handleFieldsExtracted}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>        ) : (
+          // Upload process - responsive layout
+          <div className="h-full overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <div className="flex-shrink-0 p-4 sm:p-6">
+                <TabsList className="grid w-full grid-cols-1 max-w-md">
+                  <TabsTrigger value="upload" className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    <span className="hidden sm:inline">Upload & Process</span>
+                    <span className="sm:hidden">Upload</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="upload" className="flex-1 overflow-hidden px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="h-full flex flex-col gap-4 sm:gap-6">
+                  <div className="flex-shrink-0">
+                    <FileUpload
+                      onFileSelect={handleFileSelect}
+                      onDataExtracted={handleDataExtracted}
+                      selectedFile={selectedFile}
+                    />
+                  </div>
+
+                  {selectedFile && (
+                    <div className="flex-1 overflow-hidden min-h-0">
+                      <div className="h-full grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="h-full min-h-0">
+                          <DataExtraction
+                            data={extractedData}
+                            onSave={handleSaveData}
+                            onFieldDelete={handleFieldDelete}
+                          />
+                        </div>
+                        <div className="h-full min-h-0">
+                          <PDFViewer
+                            file={selectedFile}
+                            onDataExtracted={handleDataExtracted}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
-            
-            {/* Document Chat */}
-            <DocumentChat
-              key={selectedDocument.id}
-              documentId={selectedDocument.id}
-              onFieldsExtracted={handleFieldsExtracted}
-            />
           </div>
-        </div>
-      ) : (
-        // Upload process - only when not viewing a document
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload & Process
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="upload" className="space-y-6">
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              onDataExtracted={handleDataExtracted}
-              selectedFile={selectedFile}
-            />
-
-            {selectedFile && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
-                <DataExtraction
-                  data={extractedData}
-                  onSave={handleSaveData}
-                  onFieldDelete={handleFieldDelete}
-                />
-                <PDFViewer
-                  file={selectedFile}
-                  onDataExtracted={handleDataExtracted}
-                />
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+        )}
+      </div>
     </div>
   )
 }

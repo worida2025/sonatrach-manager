@@ -19,6 +19,23 @@ export interface UploadResponse {
 }
 
 class ApiService {
+  private handleUnauthorized(): void {
+    // Clear stored token
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    window.location.href = '/login';
+  }
+
+  private async handleResponse(response: Response): Promise<Response> {
+    if (response.status === 401) {
+      this.handleUnauthorized();
+      throw new Error('Unauthorized');
+    }
+    return response;
+  }
+
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('token');
     return {
@@ -33,7 +50,6 @@ class ApiService {
       'Authorization': token ? `Bearer ${token}` : '',
     };
   }
-
   async uploadPdf(file: File): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
@@ -44,6 +60,8 @@ class ApiService {
       body: formData,
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Upload failed');
@@ -51,11 +69,12 @@ class ApiService {
 
     return response.json();
   }
-
   async getDocuments(): Promise<{ status: string; documents: Document[] }> {
     const response = await fetch(`${API_BASE_URL}/documents/`, {
       headers: this.getAuthHeaders(),
     });
+    
+    await this.handleResponse(response);
     
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
@@ -63,11 +82,12 @@ class ApiService {
 
     return response.json();
   }
-
   async getDocument(documentId: string): Promise<{ status: string; document: Document }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
       headers: this.getAuthHeaders(),
     });
+    
+    await this.handleResponse(response);
     
     if (!response.ok) {
       throw new Error('Failed to fetch document');
@@ -75,12 +95,13 @@ class ApiService {
 
     return response.json();
   }
-
   async deleteDocument(documentId: string): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to delete document');
@@ -88,11 +109,12 @@ class ApiService {
 
     return response.json();
   }
-
   async downloadDocument(documentId: string): Promise<Blob> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
       headers: this.getAuthHeadersForFormData(),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to download document');
@@ -100,7 +122,6 @@ class ApiService {
 
     return response.blob();
   }
-
   async chatWithAllDocuments(message: string): Promise<{ response: string; extracted_fields?: Record<string, string> }> {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -108,13 +129,14 @@ class ApiService {
       body: JSON.stringify({ message }),
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       throw new Error('Failed to send chat message');
     }
 
     return response.json();
   }
-
   async chatWithDocument(documentId: string, message: string): Promise<{ response: string; extracted_fields?: Record<string, string> }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/chat`, {
       method: 'POST',
@@ -122,17 +144,20 @@ class ApiService {
       body: JSON.stringify({ document_id: documentId, message }),
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       throw new Error('Failed to send chat message');
     }
 
     return response.json();
   }
-
   async getChatHistory(documentId: string): Promise<{ status: string; messages: any[] }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/chat-history`, {
       headers: this.getAuthHeaders(),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to fetch chat history');
@@ -140,7 +165,6 @@ class ApiService {
 
     return response.json();
   }
-
   async saveChatHistory(documentId: string, messages: any[]): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/save-chat`, {
       method: 'POST',
@@ -148,17 +172,20 @@ class ApiService {
       body: JSON.stringify({ document_id: documentId, messages }),
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       throw new Error('Failed to save chat history');
     }
 
     return response.json();
   }
-
   async getSettings(): Promise<{ model_name: string }> {
     const response = await fetch(`${API_BASE_URL}/admin/settings`, {
       headers: this.getAuthHeaders(),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to fetch settings');
@@ -166,7 +193,6 @@ class ApiService {
 
     return response.json();
   }
-
   async updateSettings(aiModelName: string): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/admin/settings`, {
       method: 'POST',
@@ -174,18 +200,21 @@ class ApiService {
       body: JSON.stringify({ ai_model_name: aiModelName }),
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       throw new Error('Failed to update settings');
     }
 
     return response.json();
-  }
-  async updateDocumentData(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
+  }  async updateDocumentData(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ extracted_data: extractedData }),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to update document data');
@@ -193,7 +222,6 @@ class ApiService {
 
     return response.json();
   }
-
   async updateDocumentFields(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`, {
       method: 'PUT',
@@ -201,18 +229,21 @@ class ApiService {
       body: JSON.stringify({ extracted_data: extractedData }),
     });
 
+    await this.handleResponse(response);
+
     if (!response.ok) {
       throw new Error('Failed to update document fields');
     }
 
     return response.json();
   }
-
   async deleteField(documentId: string, fieldName: string): Promise<{ status: string; message: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields/${encodeURIComponent(fieldName)}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
+
+    await this.handleResponse(response);
 
     if (!response.ok) {
       throw new Error('Failed to delete field');
