@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -147,6 +146,11 @@ const PID = () => {
     }
   }
 
+  const handleUploadSuccess = (documentId: string) => {
+    // Navigate to the document view page after successful upload
+    navigate(`/pid/document/${documentId}`)
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header Section */}
@@ -269,6 +273,7 @@ const PID = () => {
                       onFileSelect={handleFileSelect}
                       onDataExtracted={handleDataExtracted}
                       selectedFile={selectedFile}
+                      onUploadSuccess={handleUploadSuccess}
                     />
                   </div>
 

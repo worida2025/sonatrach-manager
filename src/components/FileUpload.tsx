@@ -12,11 +12,12 @@ interface FileUploadProps {
   onDataExtracted: (data: Record<string, string>) => void
   selectedFile: File | null
   className?: string
+  onUploadSuccess?: (documentId: string) => void
 }
 
-export function FileUpload({ onFileSelect, onDataExtracted, selectedFile, className }: FileUploadProps) {
-  const [isDragOver, setIsDragOver] = useState(false)
+export function FileUpload({ onFileSelect, onDataExtracted, selectedFile, className, onUploadSuccess }: FileUploadProps) {  const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  
   const handleFileUpload = async (file: File) => {
     setIsUploading(true)
     try {
@@ -28,6 +29,11 @@ export function FileUpload({ onFileSelect, onDataExtracted, selectedFile, classN
         title: "Upload Successful",
         description: `${file.name} has been processed successfully`,
       })
+
+      // Call the success callback with the document ID
+      if (onUploadSuccess && response.document_id) {
+        onUploadSuccess(response.document_id)
+      }
     } catch (error) {
       toast({
         title: "Upload Failed",
