@@ -1,0 +1,190 @@
+import React, { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { MessageCircle, Send, Bot, Database, User } from 'lucide-react'
+import { format } from 'date-fns'
+import { apiService } from '@/lib/api'
+import { toast } from '@/hooks/use-toast'
+
+interface Message {
+  id: string
+  content: string
+  sender: 'user' | 'assistant'
+  timestamp: string
+  extracted_fields?: Record<string, string>
+}
+
+interface DocumentChatProps {
+  documentId: string
+  onFieldsExtracted: (fields: Record<string, string>) => void
+}
+
+export function DocumentChat({ documentId, onFieldsExtracted }: DocumentChatProps) {
+  const [newMessage, setNewMessage] = useState('')
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'welcome',
+      content: `Hello! I can help you extract specific fields from this document. Just ask me to extract any field you need, for example:
+
+• "Extract the operating temperature"
+• "Find the pressure rating"
+• "Get the equipment ID number"
+• "Extract all valve specifications"
+
+What field would you like me to extract?`,
+      sender: 'assistant',
+      timestamp: new Date().toISOString()
+    }
+  ])
+
+  // Send message mutation for document-specific chat
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      return apiService.chatWithDocument(documentId, message)
+    },
+    onSuccess: (response, messageText) => {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: messageText,
+        sender: 'user',
+        timestamp: new Date().toISOString()
+      }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response.response,
+        sender: 'assistant',
+        timestamp: new Date().toISOString(),
+        extracted_fields: response.extracted_fields
+      }
+
+      setMessages(prev => [...prev, userMessage, assistantMessage])
+
+      // If fields were extracted, pass them to parent component
+      if (response.extracted_fields && Object.keys(response.extracted_fields).length > 0) {
+        onFieldsExtracted(response.extracted_fields)
+        toast({
+          title: "Fields Extracted",
+          description: `${Object.keys(response.extracted_fields).length} field(s) extracted and added to the document data`,
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Chat Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  })
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim()) return
+
+    sendMessageMutation.mutate(newMessage)
+    setNewMessage('')
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3">
+        <MessageCircle className="h-5 w-5 text-primary" />
+        <CardTitle className="text-lg">Extract Fields</CardTitle>
+      </CardHeader>
+      
+      <CardContent className="flex flex-col flex-1 gap-4 p-4">
+        <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${
+                  message.sender === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {message.sender === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+                
+                <div className={`max-w-[80%] space-y-2 ${
+                  message.sender === 'user' ? 'items-end' : 'items-start'
+                }`}>
+                  <div
+                    className={`rounded-lg px-3 py-2 text-sm ${
+                      message.sender === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  </div>
+                  
+                  {message.extracted_fields && Object.keys(message.extracted_fields).length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-green-700 font-medium text-sm">
+                        <Database className="h-4 w-4" />
+                        Extracted Fields:
+                      </div>
+                      <div className="space-y-1">
+                        {Object.entries(message.extracted_fields).map(([key, value]) => (
+                          <div key={key} className="text-sm">
+                            <span className="font-medium text-green-800">{key}:</span>{' '}
+                            <span className="text-green-700">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(message.timestamp), 'HH:mm')}
+                  </div>
+                </div>
+
+                {message.sender === 'user' && (
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+        <div className="flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask me to extract specific fields..."
+            disabled={sendMessageMutation.isPending}
+            className="flex-1"
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={sendMessageMutation.isPending || !newMessage.trim()}
+            size="sm"
+          >
+            {sendMessageMutation.isPending ? (
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

@@ -3,19 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Save, Edit2, Check, X } from 'lucide-react'
-import { useState } from 'react'
+import { Save, Edit2, Check, X, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 interface DataExtractionProps {
   data: Record<string, string>
   onSave: (data: Record<string, string>) => void
+  onFieldDelete?: (fieldKey: string) => void
   readOnly?: boolean
 }
 
-export function DataExtraction({ data, onSave, readOnly = false }: DataExtractionProps) {
+export function DataExtraction({ data, onSave, onFieldDelete, readOnly = false }: DataExtractionProps) {
   const [editingData, setEditingData] = useState<Record<string, string>>(data)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
+
+  // Update editing data when props change
+  useEffect(() => {
+    setEditingData(data)
+  }, [data])
 
   const handleEdit = (key: string) => {
     setEditingField(key)
@@ -30,6 +36,12 @@ export function DataExtraction({ data, onSave, readOnly = false }: DataExtractio
   const handleCancel = () => {
     setEditingField(null)
     setEditingData(data)
+  }
+  const handleDeleteField = (key: string) => {
+    if (onFieldDelete) {
+      onFieldDelete(key)
+      setHasChanges(true)
+    }
   }
 
   const handleSaveAll = () => {
@@ -80,8 +92,7 @@ export function DataExtraction({ data, onSave, readOnly = false }: DataExtractio
                 >
                   <X className="h-4 w-4" />
                 </Button>
-              </div>
-            ) : (
+              </div>            ) : (
               <div className="flex items-center gap-2">
                 <Input
                   id={key}
@@ -90,13 +101,25 @@ export function DataExtraction({ data, onSave, readOnly = false }: DataExtractio
                   className="flex-1 bg-muted"
                 />
                 {!readOnly && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(key)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(key)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    {onFieldDelete && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteField(key)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             )}

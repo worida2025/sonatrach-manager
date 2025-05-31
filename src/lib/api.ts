@@ -154,6 +154,20 @@ class ApiService {
 
     return response.json();
   }
+
+  async updateDocumentData(documentId: string, extractedData: Record<string, string>): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/data`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ extracted_data: extractedData }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update document data');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiService = new ApiService();

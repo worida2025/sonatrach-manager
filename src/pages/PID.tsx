@@ -9,6 +9,7 @@ import { PDFViewer } from '@/components/PDFViewer'
 import { DataExtraction } from '@/components/DataExtraction'
 import { UploadHistory } from '@/components/UploadHistory'
 import { DocumentViewer } from '@/components/DocumentViewer'
+import { DocumentChat } from '@/components/DocumentChat'
 import { Upload, History, FileText, ArrowLeft } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { apiService, type Document } from '@/lib/api'
@@ -104,35 +105,61 @@ const PID = () => {
       })
     }
   }
-
   const handleDataExtracted = (data: Record<string, string>) => {
     setExtractedData(data)
     // Reload documents after successful upload
     loadDocuments()
   }
 
-  const handleSaveData = (data: Record<string, string>) => {
-    // In a real app, this would save to the backend
-    console.log('Saving data:', data)
-    
-    // Add to history
-    if (selectedFile) {
-      const newHistoryItem: HistoryItem = {
-        id: Date.now().toString(),
-        fileName: selectedFile.name,
-        uploadDate: new Date().toISOString().split('T')[0],
-        fileSize: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
-        uploadedBy: 'Current User',
-        status: 'processed',
-        documentType: 'PID'
-      }
-      setHistory(prev => [newHistoryItem, ...prev])
-    }
+  const handleFieldsExtracted = (newFields: Record<string, string>) => {
+    setExtractedData(prev => ({ ...prev, ...newFields }))
+  }
 
-    toast({
-      title: "Data Saved",
-      description: "Document data has been successfully saved",
+  const handleFieldDelete = (fieldKey: string) => {
+    setExtractedData(prev => {
+      const updated = { ...prev }
+      delete updated[fieldKey]
+      return updated
     })
+  }
+  const handleSaveData = async (data: Record<string, string>) => {
+    try {
+      if (selectedDocument) {
+        // Update existing document
+        await apiService.updateDocumentData(selectedDocument.id, data)
+        setExtractedData(data)
+        toast({
+          title: "Data Saved",
+          description: "Document data has been successfully updated",
+        })
+      } else if (selectedFile) {
+        // For new files, just update local state
+        console.log('Saving data for new file:', data)
+        
+        // Add to history
+        const newHistoryItem: HistoryItem = {
+          id: Date.now().toString(),
+          fileName: selectedFile.name,
+          uploadDate: new Date().toISOString().split('T')[0],
+          fileSize: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
+          uploadedBy: 'Current User',
+          status: 'processed',
+          documentType: 'PID'
+        }
+        setHistory(prev => [newHistoryItem, ...prev])
+        
+        toast({
+          title: "Data Saved",
+          description: "Document data has been successfully saved",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Save Error",
+        description: "Failed to save document data",
+        variant: "destructive",
+      })
+    }
   }
   const handleViewHistoryItem = (item: HistoryItem) => {
     navigate(`/pid/document/${item.id}`)
@@ -170,11 +197,11 @@ const PID = () => {
             selectedFile={selectedFile}
           />
 
-          {selectedFile && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+          {selectedFile && (            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
               <DataExtraction
                 data={extractedData}
                 onSave={handleSaveData}
+                onFieldDelete={handleFieldDelete}
               />
               <PDFViewer
                 file={selectedFile}
@@ -207,14 +234,17 @@ const PID = () => {
                 </p>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
               <DataExtraction
                 data={extractedData}
                 onSave={handleSaveData}
-                readOnly={true}
+                onFieldDelete={handleFieldDelete}
               />
               <DocumentViewer document={selectedDocument} />
+              <DocumentChat 
+                documentId={selectedDocument.id}
+                onFieldsExtracted={handleFieldsExtracted}
+              />
             </div>
           </TabsContent>
         )}
