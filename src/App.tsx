@@ -11,6 +11,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Login from "@/components/Login";
 import Dashboard from "./pages/Dashboard";
 import PID from "./pages/PID";
+import PIDHistory from "./pages/PIDHistory";
 import Datasheets from "./pages/Datasheets";
 import Chat from "./pages/Chat";
 import Settings from "./pages/Settings";
@@ -39,10 +40,14 @@ const App = () => (
                         <SidebarTrigger />
                       </div>
                       <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/pid" element={
+                        <Route path="/" element={<Dashboard />} />                        <Route path="/pid" element={
                           <ProtectedRoute requiredRole="admin">
                             <PID />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/pid/history" element={
+                          <ProtectedRoute requiredRole="admin">
+                            <PIDHistory />
                           </ProtectedRoute>
                         } />
                         <Route path="/pid/document/:id" element={

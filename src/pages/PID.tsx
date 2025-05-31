@@ -7,22 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileUpload } from '@/components/FileUpload'
 import { PDFViewer } from '@/components/PDFViewer'
 import { DataExtraction } from '@/components/DataExtraction'
-import { UploadHistory } from '@/components/UploadHistory'
 import { DocumentViewer } from '@/components/DocumentViewer'
 import { DocumentChat } from '@/components/DocumentChat'
 import { Upload, History, FileText, ArrowLeft } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { apiService, type Document } from '@/lib/api'
-
-interface HistoryItem {
-  id: string
-  fileName: string
-  uploadDate: string
-  fileSize: string
-  uploadedBy: string
-  status: 'processed' | 'processing' | 'failed'
-  documentType: string
-}
 
 const PID = () => {
   const { id: documentId } = useParams()
@@ -30,7 +19,6 @@ const PID = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [extractedData, setExtractedData] = useState<Record<string, string>>({})
-  const [history, setHistory] = useState<HistoryItem[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [activeTab, setActiveTab] = useState('upload')
 
@@ -70,27 +58,14 @@ const PID = () => {
   useEffect(() => {
     loadDocuments()
   }, [])
-
   const loadDocuments = async () => {
     try {
       const response = await apiService.getDocuments()
       setDocuments(response.documents)
-      
-      // Convert to history format
-      const historyItems: HistoryItem[] = response.documents.map(doc => ({
-        id: doc.id,
-        fileName: doc.filename,
-        uploadDate: new Date(doc.upload_date).toLocaleDateString(),
-        fileSize: `${(doc.file_size / 1024 / 1024).toFixed(2)} MB`,
-        uploadedBy: 'Current User',
-        status: doc.status,
-        documentType: 'PID'
-      }))
-      setHistory(historyItems)
     } catch (error) {
       toast({
         title: "Error Loading Documents",
-        description: "Failed to load document history",
+        description: "Failed to load documents",
         variant: "destructive",
       })
     }
@@ -144,6 +119,7 @@ const PID = () => {
     // Reload documents after successful upload
     loadDocuments()
   }
+  
   const handleSaveData = async (data: Record<string, string>) => {
     try {
       if (selectedDocument) {
@@ -158,18 +134,6 @@ const PID = () => {
         // For new files, just update local state
         console.log('Saving data for new file:', data)
         
-        // Add to history
-        const newHistoryItem: HistoryItem = {
-          id: Date.now().toString(),
-          fileName: selectedFile.name,
-          uploadDate: new Date().toISOString().split('T')[0],
-          fileSize: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
-          uploadedBy: 'Current User',
-          status: 'processed',
-          documentType: 'PID'
-        }
-        setHistory(prev => [newHistoryItem, ...prev])
-        
         toast({
           title: "Data Saved",
           description: "Document data has been successfully saved",
@@ -181,111 +145,110 @@ const PID = () => {
         description: "Failed to save document data",
         variant: "destructive",
       })
-    }
-  }
-  const handleViewHistoryItem = (item: HistoryItem) => {
-    navigate(`/pid/document/${item.id}`)
-  }
+    }  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <FileText className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Process & Instrumentation Diagrams</h1>
-          <p className="text-muted-foreground">Upload and manage PID documents with automated data extraction</p>
+    <div className="container mx-auto p-6 space-y-6">      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <FileText className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Process & Instrumentation Diagrams</h1>
+            <p className="text-muted-foreground">Upload and manage PID documents with automated data extraction</p>
+          </div>
         </div>
-      </div>      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${documentId ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <TabsTrigger value="upload" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Upload & Process
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
+        {!documentId && (
+          <Button
+            variant="outline"
+            onClick={() => navigate('/pid/history')}
+            className="flex items-center gap-2"
+          >
             <History className="h-4 w-4" />
-            History
-          </TabsTrigger>
-          {documentId && (
-            <TabsTrigger value="view" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              View Document
-            </TabsTrigger>
-          )}
-        </TabsList>
+            View History
+          </Button>
+        )}      </div>
 
-        <TabsContent value="upload" className="space-y-6">          <FileUpload
-            onFileSelect={handleFileSelect}
-            onDataExtracted={handleDataExtracted}
-            selectedFile={selectedFile}
-          />
-
-          {selectedFile && (            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
-              <DataExtraction
-                data={extractedData}
-                onSave={handleSaveData}
-                onFieldDelete={handleFieldDelete}
-              />
-              <PDFViewer
-                file={selectedFile}
-                onDataExtracted={handleDataExtracted}
-              />
+      {documentId && selectedDocument ? (
+        // Document view - no tabs, direct content
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/pid/history')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to History
+            </Button>
+            <div>
+              <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
+              <p className="text-sm text-muted-foreground">
+                Uploaded: {new Date(selectedDocument.upload_date).toLocaleDateString()}
+              </p>
             </div>
-          )}
-        </TabsContent>        <TabsContent value="history" className="space-y-6">
-          <UploadHistory
-            history={history}
-            onView={handleViewHistoryItem}
-          />
-        </TabsContent>        {documentId && selectedDocument && (
-          <TabsContent value="view" className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/pid')}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to History
-              </Button>
-              <div>
-                <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
-                <p className="text-sm text-muted-foreground">
-                  Uploaded: {new Date(selectedDocument.upload_date).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
-              {/* Document Preview and Extracted Data Tabs */}
-              <Tabs defaultValue="preview" className="flex flex-col h-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="preview">Document Preview</TabsTrigger>
-                  <TabsTrigger value="data">Extracted Data</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="preview" className="flex-1 mt-4">
-                  <DocumentViewer document={selectedDocument} />
-                </TabsContent>
-                
-                <TabsContent value="data" className="flex-1 mt-4">
-                  <DataExtraction
-                    data={extractedData}
-                    onSave={handleSaveData}
-                    onFieldDelete={handleFieldDelete}
-                  />
-                </TabsContent>
-              </Tabs>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+            {/* Document Preview and Extracted Data Tabs */}
+            <Tabs defaultValue="preview" className="flex flex-col h-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="preview">Document Preview</TabsTrigger>
+                <TabsTrigger value="data">Extracted Data</TabsTrigger>
+              </TabsList>
               
-              {/* Document Chat */}
-              <DocumentChat
-                key={selectedDocument.id}
-                documentId={selectedDocument.id}
-                onFieldsExtracted={handleFieldsExtracted}
-              />
-            </div>
+              <TabsContent value="preview" className="flex-1 mt-4">
+                <DocumentViewer document={selectedDocument} />
+              </TabsContent>
+              
+              <TabsContent value="data" className="flex-1 mt-4">
+                <DataExtraction
+                  data={extractedData}
+                  onSave={handleSaveData}
+                  onFieldDelete={handleFieldDelete}
+                />
+              </TabsContent>
+            </Tabs>
+            
+            {/* Document Chat */}
+            <DocumentChat
+              key={selectedDocument.id}
+              documentId={selectedDocument.id}
+              onFieldsExtracted={handleFieldsExtracted}
+            />
+          </div>
+        </div>
+      ) : (
+        // Upload process - only when not viewing a document
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-1">
+            <TabsTrigger value="upload" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Upload & Process
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload" className="space-y-6">
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              onDataExtracted={handleDataExtracted}
+              selectedFile={selectedFile}
+            />
+
+            {selectedFile && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+                <DataExtraction
+                  data={extractedData}
+                  onSave={handleSaveData}
+                  onFieldDelete={handleFieldDelete}
+                />
+                <PDFViewer
+                  file={selectedFile}
+                  onDataExtracted={handleDataExtracted}
+                />
+              </div>
+            )}
           </TabsContent>
-        )}
-      </Tabs>
+        </Tabs>
+      )}
     </div>
   )
 }

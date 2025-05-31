@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Calendar, User, Download, Eye } from 'lucide-react'
+import { FileText, Calendar, User, Download, Eye, Trash2 } from 'lucide-react'
 
 interface HistoryItem {
   id: string
@@ -17,9 +17,13 @@ interface HistoryItem {
 interface UploadHistoryProps {
   history: HistoryItem[]
   onView: (item: HistoryItem) => void
+  onDelete?: (item: HistoryItem) => void
+  onDownload?: (item: HistoryItem) => void
+  showDelete?: boolean
+  downloadingIds?: Set<string>
 }
 
-export function UploadHistory({ history, onView }: UploadHistoryProps) {
+export function UploadHistory({ history, onView, onDelete, onDownload, showDelete = false, downloadingIds = new Set() }: UploadHistoryProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'processed': return 'bg-green-100 text-green-800'
@@ -67,8 +71,7 @@ export function UploadHistory({ history, onView }: UploadHistoryProps) {
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
                   <span>{item.fileSize}</span> • <span>{item.documentType}</span>
-                </div>
-                <div className="flex gap-2">
+                </div>                <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -76,14 +79,28 @@ export function UploadHistory({ history, onView }: UploadHistoryProps) {
                     className="h-8 px-2"
                   >
                     <Eye className="h-3 w-3" />
-                  </Button>
-                  <Button
+                  </Button>                  <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => onDownload ? onDownload(item) : undefined}
+                    disabled={!onDownload || downloadingIds.has(item.id)}
                     className="h-8 px-2"
                   >
                     <Download className="h-3 w-3" />
+                    {downloadingIds.has(item.id) && (
+                      <span className="ml-1 text-xs">...</span>
+                    )}
                   </Button>
+                  {showDelete && onDelete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDelete(item)}
+                      className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
