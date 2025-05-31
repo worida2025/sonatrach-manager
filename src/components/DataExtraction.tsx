@@ -63,8 +63,7 @@ export function DataExtraction({ data, onSave, onFieldDelete, readOnly = false }
             <Save className="h-4 w-4" />
             Save Changes
           </Button>
-        )}
-      </CardHeader>      <CardContent className="space-y-4">
+        )}      </CardHeader>      <CardContent className="space-y-4 overflow-y-auto max-h-[calc(100%-80px)]">
         {Object.entries(editingData).map(([key, value]) => (
           <div key={key} className="space-y-2">
             <Label htmlFor={key} className="text-sm font-medium">

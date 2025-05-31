@@ -236,9 +236,7 @@ const PID = () => {
             history={history}
             onView={handleViewHistoryItem}
           />
-        </TabsContent>
-
-        {documentId && selectedDocument && (
+        </TabsContent>        {documentId && selectedDocument && (
           <TabsContent value="view" className="space-y-6">
             <div className="flex items-center gap-4 mb-4">
               <Button
@@ -256,13 +254,30 @@ const PID = () => {
                 </p>
               </div>
             </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-              <DataExtraction
-                data={extractedData}
-                onSave={handleSaveData}
-                onFieldDelete={handleFieldDelete}
-              />
-              <DocumentViewer document={selectedDocument} />              <DocumentChat
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+              {/* Document Preview and Extracted Data Tabs */}
+              <Tabs defaultValue="preview" className="flex flex-col h-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="preview">Document Preview</TabsTrigger>
+                  <TabsTrigger value="data">Extracted Data</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="preview" className="flex-1 mt-4">
+                  <DocumentViewer document={selectedDocument} />
+                </TabsContent>
+                
+                <TabsContent value="data" className="flex-1 mt-4">
+                  <DataExtraction
+                    data={extractedData}
+                    onSave={handleSaveData}
+                    onFieldDelete={handleFieldDelete}
+                  />
+                </TabsContent>
+              </Tabs>
+              
+              {/* Document Chat */}
+              <DocumentChat
                 key={selectedDocument.id}
                 documentId={selectedDocument.id}
                 onFieldsExtracted={handleFieldsExtracted}
