@@ -36,8 +36,3 @@ Once the server is running, visit `http://localhost:8000/docs` for interactive A
 - `GET /documents/{document_id}` - Get specific document by ID
 - `DELETE /documents/{document_id}` - Delete a document
 
-## Environment
-
-The backend runs on port 8000 by default and accepts requests from:
-- http://localhost:8080 (Vite dev server)
-- http://localhost:3000 (Alternative frontend port)
