@@ -1,0 +1,328 @@
+{
+  "files": {
+    "pid": {
+      "file_1": {
+        "path": "9952T-510-PID-0021-1101-1 (1).pdf",
+        "unit": "510",
+        "number_of_instruments": 25
+      }
+    }
+  },
+  "instruments": {
+    "file_1": [
+      {
+        "tag": "510-FT-0001",
+        "tag_less_unit": "FT-0001",
+        "accronyme": "FT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-FIC-0001",
+        "tag_less_unit": "FIC-0001",
+        "accronyme": "FIC",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-FV-0001",
+        "tag_less_unit": "FV-0001",
+        "accronyme": "FV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PV-0003A",
+        "tag_less_unit": "PV-0003A",
+        "accronyme": "PV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PV-0003B",
+        "tag_less_unit": "PV-0003B",
+        "accronyme": "PV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PSV-0004A",
+        "tag_less_unit": "PSV-0004A",
+        "accronyme": "PSV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PSV-0004B",
+        "tag_less_unit": "PSV-0004B",
+        "accronyme": "PSV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PIC-0003",
+        "tag_less_unit": "PIC-0003",
+        "accronyme": "PIC",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PT-0003",
+        "tag_less_unit": "PT-0003",
+        "accronyme": "PT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LZI-0001",
+        "tag_less_unit": "LZI-0001",
+        "accronyme": "LZI",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LZA-0001",
+        "tag_less_unit": "LZA-0001",
+        "accronyme": "LZA",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-UZ-0003",
+        "tag_less_unit": "UZ-0003",
+        "accronyme": "UZ",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LZT-0001A",
+        "tag_less_unit": "LZT-0001A",
+        "accronyme": "LZT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LZT-0001B",
+        "tag_less_unit": "LZT-0001B",
+        "accronyme": "LZT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-PG-0002",
+        "tag_less_unit": "PG-0002",
+        "accronyme": "PG",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LZT-0001C",
+        "tag_less_unit": "LZT-0001C",
+        "accronyme": "LZT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LG-0004",
+        "tag_less_unit": "LG-0004",
+        "accronyme": "LG",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LT-0005",
+        "tag_less_unit": "LT-0005",
+        "accronyme": "LT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LIC-0005",
+        "tag_less_unit": "LIC-0005",
+        "accronyme": "LIC",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LI-0002A",
+        "tag_less_unit": "LI-0002A",
+        "accronyme": "LI",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LT-0002",
+        "tag_less_unit": "LT-0002",
+        "accronyme": "LT",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LI-0002B",
+        "tag_less_unit": "LI-0002B",
+        "accronyme": "LI",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-LG-0003",
+        "tag_less_unit": "LG-0003",
+        "accronyme": "LG",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-UZV-0001",
+        "tag_less_unit": "UZV-0001",
+        "accronyme": "UZV",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      },
+      {
+        "tag": "510-UZ-0004",
+        "tag_less_unit": "UZ-0004",
+        "accronyme": "UZ",
+        "datasheet": {
+          "file_id": "",
+          "pages": []
+        }
+      }
+    ]
+  },
+  "acronyms_to_types": {
+    "AI": "Analog Input",
+    "AO": "Analog Output",
+    "DI": "Digital Input",
+    "DO": "Digital Output",
+    "PI": "Pressure Indicator",
+    "TI": "Temperature Indicator",
+    "FI": "Flow Indicator",
+    "LI": "Level Indicator",
+    "FT": "Flow Transmitter",
+    "PT": "Pressure Transmitter",
+    "TT": "Temperature Transmitter",
+    "LT": "Level Transmitter",
+    "FIC": "Flow Indicator Controller",
+    "PIC": "Pressure Indicator Controller",
+    "TIC": "Temperature Indicator Controller",
+    "LIC": "Level Indicator Controller",
+    "FCV": "Flow Control Valve",
+    "PCV": "Pressure Control Valve",
+    "TCV": "Temperature Control Valve",
+    "LCV": "Level Control Valve",
+    "PSV": "Pressure Safety Valve",
+    "TSV": "Temperature Safety Valve",
+    "MOV": "Motor Operated Valve",
+    "SOV": "Solenoid Operated Valve",
+    "HV": "Hand Valve",
+    "CV": "Check Valve",
+    "RV": "Relief Valve",
+    "BV": "Ball Valve",
+    "GV": "Gate Valve",
+    "BFV": "Butterfly Valve",
+    "FV": "",
+    "PV": "",
+    "LZI": "",
+    "LZA": "",
+    "UZ": "",
+    "LZT": "",
+    "PG": "",
+    "LG": "",
+    "UZV": ""
+  },
+  "not_tags": [
+    "AND",
+    "OR",
+    "NOT",
+    "THE",
+    "FOR",
+    "WITH",
+    "FROM",
+    "TO",
+    "IN",
+    "OUT",
+    "UP",
+    "DOWN",
+    "ON",
+    "OFF",
+    "YES",
+    "NO",
+    "OK",
+    "BAD",
+    "NEW",
+    "OLD",
+    "MIN",
+    "MAX",
+    "AVG",
+    "SUM",
+    "SET",
+    "GET",
+    "PUT",
+    "RUN",
+    "STOP",
+    "START",
+    "END",
+    "OPEN",
+    "CLOSE",
+    "HIGH",
+    "LOW",
+    "GOOD",
+    "FAIL",
+    "PASS",
+    "TEST",
+    "CHECK",
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE"
+  ]
+}

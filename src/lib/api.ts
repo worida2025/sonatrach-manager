@@ -8,6 +8,14 @@ export interface Document {
   upload_date: string;
   file_size: number;
   extracted_data: Record<string, string>;
+  tag_extraction_result?: {
+    status: string;
+    message: string;
+    tags: string[];
+    new_acronyms: string[];
+    file_key?: string;
+    total_words_analyzed?: number;
+  };
   status: 'processed' | 'processing' | 'failed';
 }
 
@@ -15,6 +23,14 @@ export interface UploadResponse {
   status: string;
   message: string;
   extracted_data: Record<string, string>;
+  tag_extraction_result?: {
+    status: string;
+    message: string;
+    tags: string[];
+    new_acronyms: string[];
+    file_key?: string;
+    total_words_analyzed?: number;
+  };
   document_id: string;
 }
 
@@ -247,6 +263,58 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error('Failed to delete field');
+    }
+
+    return response.json();
+  }
+  async getTagStats(): Promise<{ status: string; stats: Record<string, number> }> {
+    const response = await fetch(`${API_BASE_URL}/tags/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    await this.handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Failed to get tag statistics');
+    }
+
+    return response.json();
+  }
+
+  async getDocumentTags(documentId: string): Promise<{ 
+    status: string; 
+    document_id: string; 
+    filename: string; 
+    tag_extraction_result: any; 
+    detailed_tags: any[] 
+  }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/tags`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    await this.handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Failed to get document tags');
+    }
+
+    return response.json();
+  }
+
+  async reprocessDocumentTags(documentId: string): Promise<{ 
+    status: string; 
+    message: string; 
+    tag_extraction_result: any 
+  }> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/reprocess-tags`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    await this.handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Failed to reprocess document tags');
     }
 
     return response.json();

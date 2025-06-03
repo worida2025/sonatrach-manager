@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast'
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void
-  onDataExtracted: (data: Record<string, string>) => void
+  onDataExtracted: (data: Record<string, string>, tagResult?: any) => void
   selectedFile: File | null
   className?: string
   onUploadSuccess?: (documentId: string) => void
@@ -17,13 +17,12 @@ interface FileUploadProps {
 
 export function FileUpload({ onFileSelect, onDataExtracted, selectedFile, className, onUploadSuccess }: FileUploadProps) {  const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  
-  const handleFileUpload = async (file: File) => {
+    const handleFileUpload = async (file: File) => {
     setIsUploading(true)
     try {
       const response = await apiService.uploadPdf(file)
       onFileSelect(file)
-      onDataExtracted(response.extracted_data)
+      onDataExtracted(response.extracted_data, response.tag_extraction_result)
       
       toast({
         title: "Upload Successful",

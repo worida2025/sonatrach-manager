@@ -8,6 +8,7 @@ import { PDFViewer } from '@/components/PDFViewer'
 import { DataExtraction } from '@/components/DataExtraction'
 import { DocumentViewer } from '@/components/DocumentViewer'
 import { DocumentChat } from '@/components/DocumentChat'
+import { TagExtraction } from '@/components/TagExtraction'
 import { Upload, History, FileText, ArrowLeft } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { apiService, type Document } from '@/lib/api'
@@ -18,6 +19,7 @@ const PID = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [extractedData, setExtractedData] = useState<Record<string, string>>({})
+  const [tagExtractionResult, setTagExtractionResult] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [activeTab, setActiveTab] = useState('upload')
 
@@ -109,12 +111,15 @@ const PID = () => {
       toast({
         title: "Error Deleting Field",
         description: error instanceof Error ? error.message : "Failed to delete field",
-        variant: "destructive",
-      })
+        variant: "destructive",      })
     }
   }
-  const handleDataExtracted = (data: Record<string, string>) => {
+  
+  const handleDataExtracted = (data: Record<string, string>, tagResult?: any) => {
     setExtractedData(data)
+    if (tagResult) {
+      setTagExtractionResult(tagResult)
+    }
     // Reload documents after successful upload
     loadDocuments()
   }
@@ -214,9 +219,8 @@ const PID = () => {
             <div className="flex-1 overflow-hidden">
               <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 sm:p-6">
                 {/* Left Panel - Document Preview and Data */}
-                <div className="h-full flex flex-col min-h-0">
-                  <Tabs defaultValue="preview" className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                <div className="h-full flex flex-col min-h-0">                  <Tabs defaultValue="preview" className="h-full flex flex-col">
+                    <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
                       <TabsTrigger value="preview" className="text-xs sm:text-sm">
                         <span className="hidden sm:inline">Document Preview</span>
                         <span className="sm:hidden">Preview</span>
@@ -224,6 +228,10 @@ const PID = () => {
                       <TabsTrigger value="data" className="text-xs sm:text-sm">
                         <span className="hidden sm:inline">Extracted Data</span>
                         <span className="sm:hidden">Data</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="tags" className="text-xs sm:text-sm">
+                        <span className="hidden sm:inline">Tag Extraction</span>
+                        <span className="sm:hidden">Tags</span>
                       </TabsTrigger>
                     </TabsList>
                     
@@ -236,6 +244,14 @@ const PID = () => {
                         data={extractedData}
                         onSave={handleSaveData}
                         onFieldDelete={handleFieldDelete}
+                      />
+                    </TabsContent>
+                    
+                    <TabsContent value="tags" className="flex-1 mt-4 overflow-hidden min-h-0">
+                      <TagExtraction
+                        documentId={selectedDocument.id}
+                        tagExtractionResult={selectedDocument.tag_extraction_result}
+                        onReprocess={loadDocuments}
                       />
                     </TabsContent>
                   </Tabs>
@@ -275,7 +291,7 @@ const PID = () => {
                     />
                   </div>                  {selectedFile && (
                     <div className="flex-1 overflow-hidden min-h-0">
-                      <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                         <div className="h-full min-h-0">
                           <DataExtraction
                             data={extractedData}
@@ -287,6 +303,11 @@ const PID = () => {
                           <PDFViewer
                             file={selectedFile}
                             onDataExtracted={handleDataExtracted}
+                          />
+                        </div>
+                        <div className="h-full min-h-0">
+                          <TagExtraction
+                            tagExtractionResult={tagExtractionResult}
                           />
                         </div>
                       </div>

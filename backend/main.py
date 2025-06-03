@@ -18,6 +18,7 @@ import re
 from dotenv import load_dotenv
 import jwt
 import hashlib
+from tag_extraction import process_pdf_for_tags, get_tag_extraction_stats, get_extracted_tags_for_file
 
 # Load environment variables
 load_dotenv()
@@ -717,10 +718,12 @@ async def upload_pdf(file: UploadFile = File(...), admin_user: dict = Depends(re
             buffer.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
-    
-    # Extract data from PDF
+      # Extract data from PDF
     try:
         extracted_data = extract_detailed_data_from_pdf(content)
+        
+        # Extract tags from PDF
+        tag_extraction_result = process_pdf_for_tags(content, file.filename)
         
         # Add file information
         extracted_data.update({
@@ -729,6 +732,20 @@ async def upload_pdf(file: UploadFile = File(...), admin_user: dict = Depends(re
             'Upload Date': datetime.now().strftime('%Y-%m-%d'),
             'File Path': str(file_path)
         })
+        
+        # Add tag extraction results to extracted data
+        if tag_extraction_result["status"] == "success":
+            extracted_data.update({
+                'Extracted Tags': ', '.join(tag_extraction_result["tags"]),
+                'Number of Tags': str(len(tag_extraction_result["tags"])),
+                'New Acronyms Found': ', '.join(tag_extraction_result["new_acronyms"]),
+                'Tag Extraction Status': 'Success'
+            })
+        else:
+            extracted_data.update({
+                'Tag Extraction Status': tag_extraction_result["status"],
+                'Tag Extraction Message': tag_extraction_result["message"]
+            })
         
         # Save to database
         documents = load_documents()
@@ -740,6 +757,7 @@ async def upload_pdf(file: UploadFile = File(...), admin_user: dict = Depends(re
             'upload_date': datetime.now().isoformat(),
             'file_size': len(content),
             'extracted_data': extracted_data,
+            'tag_extraction_result': tag_extraction_result,
             'status': 'processed'
         }
         documents.append(document_entry)
@@ -749,6 +767,7 @@ async def upload_pdf(file: UploadFile = File(...), admin_user: dict = Depends(re
             "status": "success",
             "message": "PDF processed successfully",
             "extracted_data": extracted_data,
+            "tag_extraction_result": tag_extraction_result,
             "document_id": document_entry['id']
         })
         
@@ -1134,6 +1153,98 @@ async def save_document_chat_history(document_id: str, request: SaveChatHistoryR
         "status": "success",
         "message": "Chat history saved successfully"
     })
+
+@app.get("/tags/stats")
+async def get_tag_stats(current_user: dict = Depends(get_current_user)):
+    """Get tag extraction statistics"""
+    try:
+        stats = get_tag_extraction_stats()
+        return JSONResponse(content={
+            "status": "success",
+            "stats": stats
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting tag stats: {str(e)}")
+
+@app.get("/documents/{document_id}/tags")
+async def get_document_tags(document_id: str, current_user: dict = Depends(get_current_user)):
+    """Get extracted tags for a specific document"""
+    try:
+        documents = load_documents()
+        document = next((doc for doc in documents if doc['id'] == document_id), None)
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Get tags from the tag extraction result
+        tag_result = document.get('tag_extraction_result', {})
+        extracted_tags = get_extracted_tags_for_file(document['filename'])
+        
+        return JSONResponse(content={
+            "status": "success",
+            "document_id": document_id,
+            "filename": document['filename'],
+            "tag_extraction_result": tag_result,
+            "detailed_tags": extracted_tags
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting document tags: {str(e)}")
+
+@app.post("/documents/{document_id}/reprocess-tags")
+async def reprocess_document_tags(document_id: str, admin_user: dict = Depends(require_admin)):
+    """Reprocess tag extraction for a specific document (Admin only)"""
+    try:
+        documents = load_documents()
+        document = next((doc for doc in documents if doc['id'] == document_id), None)
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Get the file path
+        file_path = UPLOAD_DIR / document.get('stored_filename', document['filename'])
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="PDF file not found on disk")
+        
+        # Read file content
+        with open(file_path, "rb") as f:
+            content = f.read()
+        
+        # Reprocess tags
+        tag_extraction_result = process_pdf_for_tags(content, document['filename'])
+        
+        # Update document with new tag extraction result
+        document['tag_extraction_result'] = tag_extraction_result
+        
+        # Update extracted data with new tag information
+        if tag_extraction_result["status"] == "success":
+            document['extracted_data'].update({
+                'Extracted Tags': ', '.join(tag_extraction_result["tags"]),
+                'Number of Tags': str(len(tag_extraction_result["tags"])),
+                'New Acronyms Found': ', '.join(tag_extraction_result["new_acronyms"]),
+                'Tag Extraction Status': 'Success'
+            })
+        else:
+            document['extracted_data'].update({
+                'Tag Extraction Status': tag_extraction_result["status"],
+                'Tag Extraction Message': tag_extraction_result["message"]
+            })
+        
+        # Save updated documents
+        save_documents(documents)
+        
+        return JSONResponse(content={
+            "status": "success",
+            "message": "Tag extraction reprocessed successfully",
+            "tag_extraction_result": tag_extraction_result
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reprocessing tags: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
