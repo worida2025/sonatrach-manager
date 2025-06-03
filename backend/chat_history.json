@@ -23,5 +23,46 @@
         "General Notes": "A. FOR GENERAL NOTES, SYMBOLS AND TYPICALS, REFER TO LEGEND SHEET DRAWINGS.\nB. ALL INSTRUMENT TAG NUMBERS SHOWN ON THIS PID ARE PRECEDED BY THE UNIT NUMBER OF THIS PID UNLESS OTHERWISE NOTED.\n6. PROCESSING OF STORED FEED IS PROHIBITED. REFER TO NHDT STRIPPER / SPLITTER SECTION FOR HT STORED FEED PROCESSING.\n5. CONTROL VALVE IS LOCATED IN UPSTREAM UNIT.\n4. MAXIMUM OXYGEN CO NTENT = 5 VOL. ppm.\n3. FIRE RESISTANT VALVE (ALL INSTRUMENTS, BOX PROTECTION, TUBING, CABLES, ETC., WILL BE SELECTED AND CLASSIFIED ACCORDING TO THIS PROTECTION).\n7500 MIN.\n12. PSV SET PRESSURE DEFINED AT 16 M ABOVE GRADE.\n7. DUE TO MAJOR RISK OF CATALYST POISONING IN THE PRESENCE OF WATER, PERMANENT LP STEAM CONNECTION IS NOT PROVIDED.\n9. DELETED.\n8. DRAIN SHALL BE LOCATED ON THE LOW POINT OF THE BOTTOM OUTLET PIPING.\n10. DELETED.\nMIN.\n11. REFER TO COMPLEX LOOP DESCRIPTION (9952T-510-CN-0000-0001) FOR DETAILS.\n13. 35 M MINIMUM ACOUSTIC INSULATION FOR THE LINE FROM 510-D-001 OUTLET NOZZLE TO PUMP 510-P-001-A/B SUCTION NOZZLE. ALL RAMIFICATIONS SHALL BE INSULATED ABOVE OR EQUAL TO 4\u201d DIAMETER."
       }
     }
+  ],
+  "20250531204132": [
+    {
+      "id": "welcome",
+      "content": "Hello! I can help you extract specific fields from this document. Just ask me to extract ONE field at a time, for example:\n\n\u2022 \"Extract the operating temperature\"\n\u2022 \"Find the pressure rating\"  \n\u2022 \"Get the equipment ID number\"\n\u2022 \"Extract the pump model\"\n\nPlease specify ONE field per message. What field would you like me to extract?",
+      "sender": "assistant",
+      "timestamp": "2025-06-01T15:40:12.185Z",
+      "extracted_fields": null
+    },
+    {
+      "id": "1748792510346",
+      "content": "extract equipement id",
+      "sender": "user",
+      "timestamp": "2025-06-01T15:41:50.346Z",
+      "extracted_fields": null
+    },
+    {
+      "id": "1748792510347",
+      "content": "Here's the extraction of equipment IDs from the provided document:\n\n**Field Name:** Equipment IDs\n\n**Value:**\n*   510-D-001\n*   510-P-001-A/B\n*   510-P-0002-A1A-N\n*   510-BD-0003-A12A-N\n*   510-P-0004-A1A-N\n*   510-P-0029-A1A-N\n*   510-P-0003-A1A-A\n*   510-UN-0001-A23A-N\n*   510-P-0024-A1A-N\n*   510-P-0014-A1A-N\n*   510-BD-0001-A12A-N\n*   510-HCD-0181-A1A-N\n*   510-HCD-0002-A1A-N\n*   510-P-0006-A1A-N\n*   510-P-0005-A1A-N\n*   510-HCD-0182-A1A-N\n*   510-HCD-0212-A1A-N\n*   510-P-0369-A1A-N\n*   510-P-0388-A1A-N\n*   510-P-0393-A1A-N\n*   VT-510-0001-A1A-N\n*   PSV-0008A/B\n\n\n\n**Note:** This list is based on patterns commonly found in P&IDs. There might be other elements that *could* be considered equipment, but these are the most clearly identifiable based on the provided text.",
+      "sender": "assistant",
+      "timestamp": "2025-06-01T15:41:50.346Z",
+      "extracted_fields": {
+        "Equipment ID": "510-P-001-A/B"
+      }
+    },
+    {
+      "id": "1748792574635",
+      "content": "extract first line in note section",
+      "sender": "user",
+      "timestamp": "2025-06-01T15:42:54.635Z",
+      "extracted_fields": null
+    },
+    {
+      "id": "1748792574636",
+      "content": "Here's the extracted information:\n\n**Field Name:** Note 12\n**Value:** PSV SET PRESSURE DEFINED AT 16 M ABOVE GRADE.\n",
+      "sender": "assistant",
+      "timestamp": "2025-06-01T15:42:54.635Z",
+      "extracted_fields": {
+        "First Note": "MIN.2. LI-0002B TO BE READABLE FROM VALVE.1. THE VALVE MUST BE FULLY OPEN (UZSO) BEFORE PUMP (510-P-001-A/B) CAN START."
+      }
+    }
   ]
 }

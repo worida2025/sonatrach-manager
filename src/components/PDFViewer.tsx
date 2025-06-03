@@ -112,11 +112,10 @@ export function PDFViewer({ file, onDataExtracted }: PDFViewerProps) {
           </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="flex-1 overflow-hidden p-4">
+        <CardContent className="flex-1 overflow-hidden p-4">
         <div className="h-full border rounded-lg bg-gray-50 overflow-auto">
           {pdfUrl ? (
-            <div className="p-2 sm:p-4 flex justify-center h-full">
+            <div className="p-2 sm:p-4 flex justify-center h-full min-h-[30vh]">
               <iframe
                 src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                 className="border-0 rounded max-w-full"
@@ -126,13 +125,13 @@ export function PDFViewer({ file, onDataExtracted }: PDFViewerProps) {
                   transform: `rotate(${rotation}deg)`,
                   transformOrigin: 'center center',
                   minWidth: '200px',
-                  minHeight: '300px'
+                  minHeight: '40vh'
                 }}
                 title="PDF Preview"
               />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
+            <div className="flex items-center justify-center h-full min-h-[30vh] text-center text-muted-foreground p-4">
               <div>
                 <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 opacity-50" />
                 <p className="text-sm sm:text-base font-medium mb-2">Loading PDF...</p>

@@ -34,7 +34,7 @@ const App = () => (
                 <SidebarProvider>
                   <div className="min-h-screen flex w-full overflow-hidden">
                     <AppSidebar />
-                    <main className="flex-1 flex flex-col overflow-hidden">
+                    <main className="flex-1 flex flex-col overflow-hidden min-h-screen">
                       <div className="flex-shrink-0 p-2 border-b bg-background">
                         <SidebarTrigger />
                       </div>

@@ -136,33 +136,31 @@ Please specify ONE field per message. What field would you like me to extract?`,
     setNewMessage('')
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyPress = (e: React.KeyboardEvent) => {    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
     }
   }
+  
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col min-h-0">
       <CardHeader className="flex-shrink-0 flex flex-row items-center gap-2 pb-3">
         <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
         <CardTitle className="text-base sm:text-lg">
           <span className="hidden sm:inline">Extract Fields</span>
           <span className="sm:hidden">Extract</span>
         </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="flex-1 overflow-hidden flex flex-col gap-4 p-4">
+      </CardHeader><CardContent className="flex-1 overflow-hidden flex flex-col gap-4 p-4 min-h-0">
         {isLoadingHistory ? (
-          <div className="flex items-center justify-center flex-1">
+          <div className="flex items-center justify-center flex-1 min-h-[20vh]">
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               <span className="text-xs sm:text-sm">Loading chat history...</span>
             </div>
           </div>
         ) : (
-          <>            <ScrollArea className="flex-1 pr-2 custom-scrollbar">
-              <div className="space-y-3 sm:space-y-4">
+          <>            <ScrollArea className="flex-1 pr-2 custom-scrollbar min-h-0 max-h-full">
+              <div className="space-y-3 sm:space-y-4 pb-2">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -221,15 +219,13 @@ Please specify ONE field per message. What field would you like me to extract?`,
               </div>
             </ScrollArea>
 
-            <div className="flex-shrink-0 flex gap-2">
-              <Input
+            <div className="flex-shrink-0 flex gap-2">              <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Extract ONE specific field..."
                 disabled={sendMessageMutation.isPending}
-                className="flex-1 text-xs sm:text-sm"
-                size="sm"
+                className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
               />
               <Button
                 onClick={handleSendMessage}

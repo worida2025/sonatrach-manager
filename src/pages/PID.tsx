@@ -210,10 +210,9 @@ const PID = () => {
                 </div>
               </div>
             </div>
-            
-            {/* Document Content Grid */}
+              {/* Document Content Grid */}
             <div className="flex-1 overflow-hidden">
-              <div className="h-full grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 sm:p-6">
+              <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 sm:p-6">
                 {/* Left Panel - Document Preview and Data */}
                 <div className="h-full flex flex-col min-h-0">
                   <Tabs defaultValue="preview" className="h-full flex flex-col">
@@ -241,9 +240,8 @@ const PID = () => {
                     </TabsContent>
                   </Tabs>
                 </div>
-                
-                {/* Right Panel - Document Chat */}
-                <div className="h-full min-h-0">
+                  {/* Right Panel - Document Chat */}
+                <div className="h-full min-h-0 flex flex-col">
                   <DocumentChat
                     key={selectedDocument.id}
                     documentId={selectedDocument.id}
@@ -275,11 +273,9 @@ const PID = () => {
                       selectedFile={selectedFile}
                       onUploadSuccess={handleUploadSuccess}
                     />
-                  </div>
-
-                  {selectedFile && (
+                  </div>                  {selectedFile && (
                     <div className="flex-1 overflow-hidden min-h-0">
-                      <div className="h-full grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         <div className="h-full min-h-0">
                           <DataExtraction
                             data={extractedData}

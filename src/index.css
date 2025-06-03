@@ -148,11 +148,37 @@
   .no-horizontal-scroll {
     overflow-x: hidden;
   }
-
   /* Full height with proper overflow handling */
   .full-height-container {
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile browsers */
     overflow: hidden;
+  }
+
+  /* Responsive height utilities using viewport units */
+  .min-h-screen-responsive {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .h-screen-responsive {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Flexible container heights for better responsive layouts */
+  .container-height-sm {
+    height: 40vh;
+    min-height: 300px;
+  }
+
+  .container-height-md {
+    height: 60vh;
+    min-height: 400px;
+  }
+
+  .container-height-lg {
+    height: 80vh;
+    min-height: 500px;
   }
 }

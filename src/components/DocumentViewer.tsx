@@ -164,18 +164,16 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
               </Button>
             </div>
           </div>
-          
-          <div className="flex-1 border rounded-lg bg-gray-50 overflow-auto">
+            <div className="flex-1 border rounded-lg bg-gray-50 overflow-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full min-h-[200px] sm:min-h-[300px]">
+              <div className="flex items-center justify-center h-full min-h-[30vh] sm:min-h-[40vh]">
                 <div className="text-center text-muted-foreground">
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mx-auto mb-4"></div>
                   <p className="text-xs sm:text-sm">Loading PDF preview...</p>
                 </div>
               </div>
             ) : pdfUrl ? (
-              <div className="p-2 sm:p-4 flex justify-center h-full">
-                <iframe
+              <div className="p-2 sm:p-4 flex justify-center h-full min-h-[30vh]">                <iframe
                   src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                   className="border-0 rounded max-w-full"
                   style={{
@@ -184,13 +182,12 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
                     transform: `rotate(${rotation}deg)`,
                     transformOrigin: 'center center',
                     minWidth: '200px',
-                    minHeight: '300px'
+                    minHeight: '40vh'
                   }}
                   title={`Preview of ${document.filename}`}
                 />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full min-h-[200px] sm:min-h-[300px] text-center text-muted-foreground p-4">
+              </div>            ) : (
+              <div className="flex items-center justify-center h-full min-h-[30vh] sm:min-h-[40vh] text-center text-muted-foreground p-4">
                 <div>
                   <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 opacity-50" />
                   <p className="text-sm sm:text-lg font-medium mb-2">Preview Unavailable</p>
