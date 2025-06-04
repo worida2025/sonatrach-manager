@@ -1,0 +1,100 @@
+{
+  "id": "doc_20250604_001024_9952T-505-SP-1541-0001-7 (1)_Equipment_1_20250604_001025",
+  "equipment_name": "Equipment_1",
+  "document_id": "doc_20250604_001024_9952T-505-SP-1541-0001-7 (1)",
+  "created_at": "2025-06-04T00:10:25.552222",
+  "content": {
+    "text": "\n--- Page 1 ---\nALGIERS REFINERY \nREHABILITATION AND ADAPTATION PROJECT \n \nINSTRUMENTATION DATA SHEET \nCONTROL VALVES \nProject N° - Unit \nDoc Type \nMaterial Code \nSerial Number \nRev. \nPage \nDocument Class : \nCLASS 1 \n9952T-505 \nSP \n1541 \n0001 \n7 \n1/338 \n \nPages modified under this revision: All Pages \n \n \n \n \n7 \n14/JUN/13 \nIssue for Purchase \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n6 \n26/FEB/13 \nIssue for Purchase \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n5 \n28/SEP/12 \nIssue for Purchase \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n4 \n31/JUL/12 \nIssue for Purchase \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n3 \n30/MAY/12 \nIssue for Purchase \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n2 \n04/MAY/12 \nIssue for Purchase  \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n1 \n16/MAR/12 \nIssue for Purchase  \nR.YADAV \nR.BISWAS \nN.AGRAWAL \n0 \n10/FEB/12 \nIssue for Purchase  \nR.CHIPLONKAR \nR.BISWAS \nN.AGRAWAL \nRev \nDate \nDD/MMM/YY \nSTATUS \nWRITTEN BY \n(name & visa) \nCHECKED BY \n(name & visa) \nAPPROVED BY \n(name & visa) \nDOCUMENT REVISIONS  \nSections changed in last revision are identified by a vertical line in the margin  \n \nSP - ANG  - rev. A \n \n \n \n \nINSTRUMENTATION DATA SHEET  \n \nCONTROL VALVES \n \n \n \n \n \n \n \n \n \n \n \n \nRajesh \n2013.06.18 12:07:14 \n+05'30'\nRINA BISWAS \n2013.06.18 14:29:54 \n+05'30'\nDigitally signed by \nNEERAJ AGRAWAL \nDate: 2013.06.18 \n14:41:37 +05'30'\n",
+    "images": [],
+    "tables": [
+      {
+        "page": 1,
+        "data": [
+          [
+            "7",
+            "14/JUN/13",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "6",
+            "26/FEB/13",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "5",
+            "28/SEP/12",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "4",
+            "31/JUL/12",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "3",
+            "30/MAY/12",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "2",
+            "04/MAY/12",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "1",
+            "16/MAR/12",
+            "Issue for Purchase",
+            "R.YADAV",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "0",
+            "10/FEB/12",
+            "Issue for Purchase",
+            "R.CHIPLONKAR",
+            "R.BISWAS",
+            "N.AGRAWAL"
+          ],
+          [
+            "Rev",
+            "Date\nDD/MMM/YY",
+            "STATUS",
+            "WRITTEN BY\n(name & visa)",
+            "CHECKED BY\n(name & visa)",
+            "APPROVED BY\n(name & visa)"
+          ],
+          [
+            "DOCUMENT REVISIONS",
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        ]
+      }
+    ],
+    "metadata": {}
+  },
+  "parsed_fields": {},
+  "chat_history": []
+}

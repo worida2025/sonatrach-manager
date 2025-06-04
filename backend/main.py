@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 import jwt
 import hashlib
 from tag_extraction import process_pdf_for_tags, get_tag_extraction_stats, get_extracted_tags_for_file
+from datasheet_splitter import datasheet_splitter
 
 # Load environment variables
 load_dotenv()
@@ -74,6 +75,10 @@ class SettingsRequest(BaseModel):
 class ChatRequest(BaseModel):
     document_id: str
     message: str
+
+class DatasheetChatRequest(BaseModel):
+    datasheet_id: str
+    message: str
     
 class FieldExtractionRequest(BaseModel):
     document_id: str
@@ -87,6 +92,11 @@ class ChatResponse(BaseModel):
     response: str
     extracted_fields: Optional[Dict[str, str]] = None
 
+class DatasheetChatResponse(BaseModel):
+    response: str
+    datasheet_id: str
+    equipment_name: str
+
 class UpdateDocumentFieldsRequest(BaseModel):
     extracted_data: Dict[str, str]
 
@@ -96,6 +106,19 @@ class ChatMessage(BaseModel):
     sender: str
     timestamp: str
     extracted_fields: Optional[Dict[str, str]] = None
+
+class DatasheetInfo(BaseModel):
+    id: str
+    equipment_name: str
+    pages: str
+    created_at: str
+    fields_count: int
+
+class DatasheetProcessResponse(BaseModel):
+    status: str
+    message: str
+    document_id: Optional[str] = None
+    datasheets: List[Dict] = []
 
 class SaveChatHistoryRequest(BaseModel):
     document_id: str
@@ -235,6 +258,22 @@ def analyze_pid_content(text: str, tables: List) -> Dict[str, str]:
     text_lower = text.lower()
     lines = text.split('\n')
     
+    # Check if this is an instrumentation datasheet
+    is_instrumentation_datasheet = any(keyword in text_lower for keyword in [
+        'instrumentation data sheet', 'control valves', 'valve data sheet', 
+        'instrument data', 'datasheet'
+    ])
+    
+    if is_instrumentation_datasheet:
+        data['Document Type'] = 'Instrumentation Data Sheet'
+        
+        # Extract specific instrumentation data
+        instrumentation_data = extract_instrumentation_data(text, tables)
+        if instrumentation_data:
+            data.update(instrumentation_data)
+    else:
+        data['Document Type'] = 'Process & Instrumentation Diagram'
+    
     # Extract two letter + four number patterns
     pattern_data = extract_two_letter_four_number_patterns(text)
     if pattern_data:
@@ -266,6 +305,11 @@ def analyze_pid_content(text: str, tables: List) -> Dict[str, str]:
     service_info = extract_service_info(text)
     if service_info:
         data.update(service_info)
+    
+    # Extract project information
+    project_info = extract_project_info(text)
+    if project_info:
+        data.update(project_info)
     
     # Look for title/drawing number
     for line in lines[:10]:  # Check first 10 lines for title
@@ -320,44 +364,124 @@ def analyze_pid_content(text: str, tables: List) -> Dict[str, str]:
             data['Table Headers'] = ', '.join([str(h) for h in headers if h])
     
     # Add some default information
-    data['Document Type'] = 'Process & Instrumentation Diagram'
     data['Status'] = 'Uploaded'
     data['Processing Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     return data
 
-def extract_notes_section(text: str, section_name: str) -> str:
-    """Extract notes sections like GENERAL NOTES or NOTES"""
+def extract_instrumentation_data(text: str, tables: List) -> Dict[str, str]:
+    """Extract specific data from instrumentation datasheets"""
+    data = {}
     lines = text.split('\n')
-    notes_content = []
-    capturing = False
     
-    for line in lines:
-        line_upper = line.upper().strip()
-        
-        # Start capturing when we find the section
-        if section_name.upper() in line_upper and not capturing:
-            capturing = True
-            # Include the current line if it has content after the section name
-            if len(line.strip()) > len(section_name):
-                notes_content.append(line.strip())
-            continue
-        
-        # Stop capturing if we hit another section header
-        if capturing and (line_upper.startswith('NOTES:') or 
-                         line_upper.startswith('GENERAL NOTES:') or
-                         line_upper.startswith('SPECIFICATIONS:') or
-                         line_upper.startswith('EQUIPMENT:') or
-                         line_upper.startswith('SERVICE:') or
-                         (len(line_upper) > 0 and line_upper.isupper() and ':' in line_upper)):
-            if section_name.upper() not in line_upper:
-                break
-        
-        # Capture content lines
-        if capturing and line.strip():
-            notes_content.append(line.strip())
+    # Look for project information
+    project_patterns = {
+        'Project Number': r'Project\s+N[°o]?\s*[-:]?\s*([A-Z0-9-]+)',
+        'Unit': r'Unit\s+[-:]?\s*([A-Z0-9-]+)',
+        'Document Class': r'Document\s+Class\s*[:.]?\s*([A-Z0-9\s]+)',
+        'Serial Number': r'Serial\s+Number\s*[:.]?\s*([A-Z0-9-]+)',
+        'Material Code': r'Material\s+Code\s*[:.]?\s*([A-Z0-9-]+)',
+    }
     
-    return '\n'.join(notes_content) if notes_content else ""
+    for key, pattern in project_patterns.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data[key] = match.group(1).strip()
+    
+    # Extract revision history
+    revision_data = extract_revision_history(text)
+    if revision_data:
+        data.update(revision_data)
+    
+    # Extract valve specifications if this is a control valve datasheet
+    if 'control valve' in text.lower():
+        valve_data = extract_valve_specifications(text, tables)
+        if valve_data:
+            data.update(valve_data)
+    
+    # Count total pages
+    page_pattern = r'(\d+)/(\d+)'
+    page_matches = re.findall(page_pattern, text)
+    if page_matches:
+        # Get the highest page number
+        total_pages = max([int(match[1]) for match in page_matches])
+        data['Total Pages'] = str(total_pages)
+    
+    return data
+
+def extract_project_info(text: str) -> Dict[str, str]:
+    """Extract project information from any document"""
+    data = {}
+    
+    # Look for refinery/plant information
+    if 'algiers refinery' in text.lower():
+        data['Facility'] = 'Algiers Refinery'
+    if 'rehabilitation and adaptation project' in text.lower():
+        data['Project Type'] = 'Rehabilitation and Adaptation Project'
+    
+    # Look for company information
+    if 'sonatrach' in text.lower():
+        data['Owner'] = 'Sonatrach'
+    
+    return data
+
+def extract_revision_history(text: str) -> Dict[str, str]:
+    """Extract revision history from document"""
+    data = {}
+    
+    # Look for revision table pattern
+    revision_pattern = r'(\d+)\s+(\d{2}/[A-Z]{3}/\d{2,4})\s+([\w\s]+)\s+([A-Z\.]+)\s+([A-Z\.]+)\s+([A-Z\.]+)'
+    revisions = re.findall(revision_pattern, text)
+    
+    if revisions:
+        latest_revision = revisions[0]  # First match is usually the latest
+        data['Latest Revision'] = latest_revision[0]
+        data['Revision Date'] = latest_revision[1]
+        data['Revision Description'] = latest_revision[2].strip()
+        data['Drawn By'] = latest_revision[3]
+        data['Checked By'] = latest_revision[4]
+        data['Approved By'] = latest_revision[5]
+        data['Total Revisions'] = str(len(revisions))
+    
+    return data
+
+def extract_valve_specifications(text: str, tables: List) -> Dict[str, str]:
+    """Extract valve specifications from control valve datasheets"""
+    data = {}
+    
+    # Count valve entries in tables
+    valve_count = 0
+    valve_tags = set()
+    
+    for table in tables:
+        for row in table:
+            if row:
+                for cell in row:
+                    if cell and isinstance(cell, str):
+                        # Look for valve tags (pattern like FV-1234, PV-5678, etc.)
+                        valve_pattern = r'\b[A-Z]{1,3}V[-]?\d{3,5}[A-Z]?\b'
+                        found_valves = re.findall(valve_pattern, cell)
+                        valve_tags.update(found_valves)
+    
+    if valve_tags:
+        data['Total Valves'] = str(len(valve_tags))
+        data['Sample Valve Tags'] = ', '.join(list(valve_tags)[:10])
+    
+    # Look for common valve specifications
+    spec_patterns = {
+        'Valve Body Material': r'Body\s+Material[:\s]+([A-Za-z0-9\s]+)',
+        'Valve Size': r'Size[:\s]+(\d+["\s]*\w*)',
+        'Valve Class': r'Class[:\s]+(\d+)',
+        'End Connection': r'End\s+Connection[:\s]+([A-Za-z0-9\s]+)',
+    }
+    
+    for key, pattern in spec_patterns.items():
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        if matches:
+            # Take the most common match
+            data[key] = matches[0].strip()
+    
+    return data
 
 def extract_two_letter_four_number_patterns(text: str) -> Dict[str, str]:
     """Extract all patterns containing two letters followed by 4 numbers"""
@@ -409,135 +533,67 @@ def extract_two_letter_four_number_patterns(text: str) -> Dict[str, str]:
     return pattern_data
 
 def extract_enhanced_notes(text: str) -> Dict[str, str]:
-    """Enhanced extraction of notes and general notes with better parsing"""
+    """Extract and categorize different types of notes from the document"""
     notes_data = {}
     
-    # Split text into lines for better processing
-    lines = text.split('\n')
-    
-    # Enhanced patterns for finding notes sections
+    # Look for different types of notes
     note_patterns = [
-        r'GENERAL\s+NOTES?:?',
-        r'NOTES?:?',
-        r'DESIGN\s+NOTES?:?',
-        r'PROCESS\s+NOTES?:?',
-        r'OPERATING\s+NOTES?:?',
-        r'SAFETY\s+NOTES?:?',
-        r'MAINTENANCE\s+NOTES?:?'
+        r'GENERAL NOTES(.*?)(?=\n[A-Z][A-Z]|\n\s*\n|$)',
+        r'NOTES(.*?)(?=\n[A-Z][A-Z]|\n\s*\n|$)',
+        r'NOTE:?(.*?)(?=\n[A-Z][A-Z]|\n\s*\n|$)',
     ]
     
-    for pattern in note_patterns:
-        notes_content = extract_notes_by_pattern(text, pattern)
-        if notes_content:
-            # Determine the section name
-            section_name = re.search(pattern, text, re.IGNORECASE)
-            if section_name:
-                clean_name = section_name.group().replace(':', '').strip().title()
-                notes_data[clean_name] = notes_content
+    for i, pattern in enumerate(note_patterns):
+        matches = re.findall(pattern, text, re.DOTALL | re.IGNORECASE)
+        if matches:
+            notes_data[f'Notes Section {i+1}'] = matches[0].strip()
     
-    # Also look for numbered notes (1., 2., 3., etc.)
-    numbered_notes = extract_numbered_notes(text)
+    # Extract numbered notes
+    numbered_notes = re.findall(r'(\d+\.\s+[^0-9]+?)(?=\d+\.|$)', text, re.DOTALL)
     if numbered_notes:
-        notes_data['Numbered Notes'] = numbered_notes
-    
-    # Look for bullet point notes
-    bullet_notes = extract_bullet_notes(text)
-    if bullet_notes:
-        notes_data['Bullet Point Notes'] = bullet_notes
+        for i, note in enumerate(numbered_notes[:10]):  # Limit to first 10 notes
+            notes_data[f'Note {i+1}'] = note.strip()
     
     return notes_data
-
-def extract_notes_by_pattern(text: str, pattern: str) -> str:
-    """Extract notes using a specific regex pattern"""
-    lines = text.split('\n')
-    notes_content = []
-    capturing = False
-    
-    for i, line in enumerate(lines):
-        line_stripped = line.strip()
-        
-        # Check if this line matches our pattern
-        if re.search(pattern, line, re.IGNORECASE):
-            capturing = True
-            # Include any content after the pattern on the same line
-            match = re.search(pattern, line, re.IGNORECASE)
-            if match:
-                after_pattern = line[match.end():].strip()
-                if after_pattern:
-                    notes_content.append(after_pattern)
-            continue
-        
-        if capturing:
-            # Stop if we hit another major section
-            if (line_stripped and 
-                (re.match(r'^[A-Z\s]+:$', line_stripped) or  # All caps section headers
-                 re.match(r'^\d+\.\s*[A-Z]', line_stripped) or  # Numbered sections
-                 'SPECIFICATIONS' in line_stripped.upper() or
-                 'EQUIPMENT LIST' in line_stripped.upper() or
-                 'LEGEND' in line_stripped.upper() or
-                 'SYMBOLS' in line_stripped.upper())):
-                break
-            
-            # Capture non-empty lines
-            if line_stripped:
-                notes_content.append(line_stripped)
-            elif notes_content:  # Preserve empty lines within notes but not at the beginning
-                notes_content.append('')
-    
-    # Clean up the content
-    while notes_content and not notes_content[-1]:  # Remove trailing empty lines
-        notes_content.pop()
-    
-    return '\n'.join(notes_content)
-
-def extract_numbered_notes(text: str) -> str:
-    """Extract numbered notes (1., 2., 3., etc.)"""
-    lines = text.split('\n')
-    numbered_notes = []
-    
-    for line in lines:
-        line_stripped = line.strip()
-        # Look for lines starting with numbers followed by a period
-        if re.match(r'^\d+\.\s+.+', line_stripped):
-            numbered_notes.append(line_stripped)
-    
-    return '\n'.join(numbered_notes) if numbered_notes else ""
-
-def extract_bullet_notes(text: str) -> str:
-    """Extract bullet point notes (•, -, *, etc.)"""
-    lines = text.split('\n')
-    bullet_notes = []
-    
-    for line in lines:
-        line_stripped = line.strip()
-        # Look for lines starting with bullet characters
-        if re.match(r'^[•\-\*]\s+.+', line_stripped):
-            bullet_notes.append(line_stripped)
-    
-    return '\n'.join(bullet_notes) if bullet_notes else ""
 
 def extract_equipment_info(text: str) -> Dict[str, str]:
     """Extract equipment information from the document"""
     equipment_data = {}
     
-    # Look for equipment tags
-    equipment_pattern = r'\b[A-Z]{1,3}[-]?\d{3,5}[A-Z]?\b'
-    equipment_tags = re.findall(equipment_pattern, text)
+    # Extract equipment tags using various patterns
+    equipment_patterns = [
+        r'([A-Z]{1,3}-?\d{3}-?[A-Z]?-?\d{3,4}[A-Z]?(?:/[AB])?)',  # Equipment tags
+        r'EQUIPMENT\s+(\d{3}-[A-Z]-\d{3})',  # Equipment format
+        r'TAG\s*NO\.?\s*([A-Z]{2,3}-?\d{3,4})',  # Tag numbers
+    ]
     
-    # Look for common equipment types
-    equipment_types = []
-    common_equipment = ['pump', 'tank', 'valve', 'heat exchanger', 'reactor', 'compressor', 'separator', 'filter']
+    all_equipment = set()
+    for pattern in equipment_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        all_equipment.update(matches)
     
-    for equipment in common_equipment:
-        if equipment.lower() in text.lower():
-            equipment_types.append(equipment.title())
+    if all_equipment:
+        # Sort and limit equipment tags
+        sorted_equipment = sorted(list(all_equipment))
+        equipment_data['Equipment Tags'] = ', '.join(sorted_equipment[:20])  # Limit to 20
+        equipment_data['Equipment Count'] = str(len(all_equipment))
+        
+        # Sample first 5 for quick reference
+        equipment_data['Sample Equipment Tags'] = ', '.join(sorted_equipment[:5])
     
-    if equipment_tags:
-        equipment_data['Equipment Tags'] = ', '.join(list(set(equipment_tags)))
-        equipment_data['Equipment Count'] = str(len(set(equipment_tags)))
+    # Extract equipment types
+    equipment_types = set()
+    type_patterns = [
+        r'(PUMP)', r'(VALVE)', r'(HEAT EXCHANGER)', r'(VESSEL)', r'(DRUM)',
+        r'(COMPRESSOR)', r'(TURBINE)', r'(SEPARATOR)', r'(REACTOR)', r'(COLUMN)'
+    ]
+    
+    for pattern in type_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            equipment_types.add(pattern.strip('()').title())
     
     if equipment_types:
-        equipment_data['Equipment Types'] = ', '.join(list(set(equipment_types)))
+        equipment_data['Equipment Types'] = ', '.join(sorted(equipment_types))
     
     return equipment_data
 
@@ -545,707 +601,516 @@ def extract_service_info(text: str) -> Dict[str, str]:
     """Extract service information from the document"""
     service_data = {}
     
-    # Look for service-related keywords
-    service_keywords = ['cooling water', 'steam', 'nitrogen', 'compressed air', 'instrument air', 
-                       'natural gas', 'fuel gas', 'electrical', 'hydraulic', 'pneumatic']
+    # Common services in process documents
+    services = [
+        'Steam', 'Cooling Water', 'Process Water', 'Instrument Air',
+        'Nitrogen', 'Natural Gas', 'Fuel Gas', 'Compressed Air',
+        'Hydraulic', 'Thermal Oil', 'Hot Oil', 'Condensate'
+    ]
     
     found_services = []
-    for service in service_keywords:
-        if service.lower() in text.lower():
-            found_services.append(service.title())
+    for service in services:
+        if re.search(rf'\b{service}\b', text, re.IGNORECASE):
+            found_services.append(service)
     
     if found_services:
-        service_data['Services'] = ', '.join(list(set(found_services)))    
-    # Look for utility connections
-    utility_pattern = r'\b(CW|SW|IA|NA|NG|FG|STM)\b'
-    utilities = re.findall(utility_pattern, text)
-    if utilities:
-        service_data['Utility Codes'] = ', '.join(list(set(utilities)))
+        service_data['Services'] = ', '.join(found_services)
     
     return service_data
 
-def extract_single_field_with_ai(document_text: str, query: str) -> Dict[str, str]:
-    """Use Gemini AI to extract a single specific field and return it as a dictionary"""
-    prompt = f"""
-    You are an expert at extracting specific information from engineering documents.
+def extract_notes_section(text: str, section_name: str) -> str:
+    """Extract a specific notes section from the document"""
+    pattern = rf'{section_name}(.*?)(?=\n[A-Z][A-Z]|\n\s*\n|$)'
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     
-    Document content:
-    {document_text}
+    if match:
+        return match.group(1).strip()
     
-    Task: {query}
-    
-    Extract ONLY ONE field based on the user's request. Determine an appropriate field name and extract its value.
-    
-    Respond in the following JSON format:
-    {{"field_name": "value"}}
-    
-    For example:
-    - If asked for "operating temperature", respond: {{"Operating Temperature": "150°C"}}
-    - If asked for "pressure rating", respond: {{"Pressure Rating": "300 PSI"}}
-    - If asked for "equipment ID", respond: {{"Equipment ID": "P-101"}}
-    
-    If the information is not found, respond: {{"Error": "Information not found in document"}}
-    
-    Return only the JSON object, no other text.
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
-        
-        # Try to parse as JSON
-        import json
-        try:
-            # Remove any markdown formatting
-            if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '').strip()
-            elif response_text.startswith('```'):
-                response_text = response_text.replace('```', '').strip()
-            
-            parsed_response = json.loads(response_text)
-            
-            # If it's a valid dictionary with one key-value pair, return it
-            if isinstance(parsed_response, dict) and len(parsed_response) == 1:
-                return parsed_response
-            elif isinstance(parsed_response, dict) and len(parsed_response) > 1:
-                # Take only the first field
-                first_key = list(parsed_response.keys())[0]
-                return {first_key: parsed_response[first_key]}
-            else:
-                # Fallback if parsing fails
-                return {"Extracted Field": response_text}
-                
-        except json.JSONDecodeError:
-            # If JSON parsing fails, try to extract field name and value manually
-            lines = response_text.split('\n')
-            for line in lines:
-                if ':' in line:
-                    parts = line.split(':', 1)
-                    if len(parts) == 2:
-                        field_name = parts[0].strip().strip('"')
-                        field_value = parts[1].strip().strip('"')
-                        return {field_name: field_value}
-            
-            # Final fallback
-            return {"Extracted Information": response_text}
-            
-    except Exception as e:
-        return {"Error": f"Error extracting field: {str(e)}"}
+    return ""
 
-def load_chat_history():
-    """Load chat history from JSON file"""
-    chat_history_file = "chat_history.json"
-    if os.path.exists(chat_history_file):
-        with open(chat_history_file, 'r') as f:
-            return json.load(f)
-    return {}
+# API Endpoints
 
-def save_chat_history(chat_history):
-    """Save chat history to JSON file"""
-    chat_history_file = "chat_history.json"
-    with open(chat_history_file, 'w') as f:
-        json.dump(chat_history, f, indent=2)
-
-# Authentication routes
 @app.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
+    """Authenticate user and return JWT token"""
     username = request.username
     password = hashlib.sha256(request.password.encode()).hexdigest()
     
     if username in USERS_DB and USERS_DB[username]["password"] == password:
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": username, "role": USERS_DB[username]["role"]},
-            expires_delta=access_token_expires
-        )
+        user_data = {"sub": username, "role": USERS_DB[username]["role"]}
+        token = create_access_token(user_data)
+        
         return LoginResponse(
-            access_token=access_token,
+            access_token=token,
             token_type="bearer",
             user_role=USERS_DB[username]["role"]
         )
     
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password"
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
 @app.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current user information"""
     return UserResponse(username=current_user["username"], role=current_user["role"])
 
-# Admin-only routes
-@app.get("/admin/settings")
-async def get_settings(admin_user: dict = Depends(require_admin)):
-    return load_settings()
-
-@app.post("/admin/settings")
-async def update_settings(settings: SettingsRequest, admin_user: dict = Depends(require_admin)):
-    current_settings = load_settings()
-    current_settings["model_name"] = settings.ai_model_name
-    save_settings(current_settings)
-    
-    # Update the global model
-    global model
-    model = genai.GenerativeModel(settings.ai_model_name)
-    
-    return {"status": "success", "message": "Settings updated successfully"}
-
-@app.get("/")
-async def root():
-    return {"message": "PDF Data Extraction API is running"}
-
 @app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...), admin_user: dict = Depends(require_admin)):
-    """Upload and process a PDF file (Admin only)"""
-    
-    # Validate file type
-    if not file.filename.lower().endswith('.pdf'):
+async def upload_pdf(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload and process a PDF file"""
+    if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    # Read file content
-    try:
-        content = await file.read()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
-      # Save file to uploads directory with unique name
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    file_extension = Path(file.filename).suffix
-    unique_filename = f"{timestamp}_{file.filename}"
-    file_path = UPLOAD_DIR / unique_filename
+    # Generate unique filename
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    stored_filename = f"{timestamp}_{file.filename}"
+    file_path = UPLOAD_DIR / stored_filename
     
+    # Save uploaded file
     try:
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
-      # Extract data from PDF
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    # Extract data from PDF
     try:
         extracted_data = extract_detailed_data_from_pdf(content)
         
-        # Extract tags from PDF
-        tag_extraction_result = process_pdf_for_tags(content, file.filename)
+        # Process for tag extraction
+        tag_result = None
+        try:
+            tag_result = process_pdf_for_tags(str(file_path))
+        except Exception as e:
+            print(f"Tag extraction failed: {e}")
         
-        # Add file information
-        extracted_data.update({
-            'File Name': file.filename,
-            'File Size': f"{len(content) / 1024 / 1024:.2f} MB",
-            'Upload Date': datetime.now().strftime('%Y-%m-%d'),
-            'File Path': str(file_path)
-        })
-        
-        # Add tag extraction results to extracted data
-        if tag_extraction_result["status"] == "success":
-            extracted_data.update({
-                'Extracted Tags': ', '.join(tag_extraction_result["tags"]),
-                'Number of Tags': str(len(tag_extraction_result["tags"])),
-                'New Acronyms Found': ', '.join(tag_extraction_result["new_acronyms"]),
-                'Tag Extraction Status': 'Success'
-            })
-        else:
-            extracted_data.update({
-                'Tag Extraction Status': tag_extraction_result["status"],
-                'Tag Extraction Message': tag_extraction_result["message"]
-            })
-        
-        # Save to database
-        documents = load_documents()
-        document_entry = {
-            'id': timestamp,
-            'filename': file.filename,
-            'original_filename': file.filename,
-            'stored_filename': unique_filename,
-            'upload_date': datetime.now().isoformat(),
-            'file_size': len(content),
-            'extracted_data': extracted_data,
-            'tag_extraction_result': tag_extraction_result,
-            'status': 'processed'
+        # Create document record
+        document = {
+            "id": timestamp,
+            "filename": file.filename,
+            "original_filename": file.filename,
+            "stored_filename": stored_filename,
+            "upload_date": datetime.now().isoformat(),
+            "file_size": len(content),
+            "extracted_data": extracted_data,
+            "status": "processed"
         }
-        documents.append(document_entry)
+        
+        if tag_result:
+            document["tag_extraction_result"] = tag_result
+        
+        # Save to documents database
+        documents = load_documents()
+        documents.append(document)
         save_documents(documents)
         
-        return JSONResponse(content={
+        # Process for datasheet splitting if it's an instrumentation datasheet
+        try:
+            text = extract_text_from_pdf(content)
+            if "instrumentation data sheet" in text.lower() or "data sheet" in text.lower():
+                datasheet_splitter(str(file_path))
+        except Exception as e:
+            print(f"Datasheet splitting failed: {e}")
+        
+        return {
             "status": "success",
-            "message": "PDF processed successfully",
+            "message": "File uploaded and processed successfully",
+            "document_id": timestamp,
             "extracted_data": extracted_data,
-            "tag_extraction_result": tag_extraction_result,
-            "document_id": document_entry['id']
-        })
+            "tag_extraction_result": tag_result
+        }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+        # Clean up file if processing failed
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
 
 @app.get("/documents/")
 async def get_documents(current_user: dict = Depends(get_current_user)):
-    """Get list of all uploaded documents"""
+    """Get all uploaded documents"""
     documents = load_documents()
-    return JSONResponse(content={
-        "status": "success",
-        "documents": documents
-    })
+    return {"status": "success", "documents": documents}
 
 @app.get("/documents/{document_id}")
-async def get_document(document_id: str, current_user: dict = Depends(get_current_user)):
+async def get_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """Get specific document by ID"""
     documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    document = next((doc for doc in documents if doc["id"] == document_id), None)
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    return JSONResponse(content={
-        "status": "success",
-        "document": document
-    })
+    return document
 
-@app.get("/documents/{document_id}/download")
-async def download_document(document_id: str):
-    """Download a document file"""
+@app.put("/documents/{document_id}")
+async def update_document(
+    document_id: str,
+    request: UpdateDocumentFieldsRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update document extracted data"""
     documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    document = next((doc for doc in documents if doc["id"] == document_id), None)
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Get file path from stored filename or original filename
-    stored_filename = document.get('stored_filename', document['filename'])
-    file_path = UPLOAD_DIR / stored_filename
+    # Update extracted data
+    document["extracted_data"].update(request.fields)
+    save_documents(documents)
     
-    # If stored filename doesn't exist, try original filename
-    if not file_path.exists():
-        file_path = UPLOAD_DIR / document['filename']
-    
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Document file not found on server")
-    
-    return FileResponse(
-        path=str(file_path),
-        filename=document.get('original_filename', document['filename']),
-        media_type='application/pdf'
-    )
+    return {"status": "success", "message": "Document updated successfully"}
 
 @app.delete("/documents/{document_id}")
-async def delete_document(document_id: str, admin_user: dict = Depends(require_admin)):
-    """Delete a document (Admin only)"""
+async def delete_document(
+    document_id: str,
+    current_user: dict = Depends(require_admin)
+):
+    """Delete a document (admin only)"""
     documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    document_index = next((i for i, doc in enumerate(documents) if doc["id"] == document_id), None)
     
-    if not document:
+    if document_index is None:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Remove from list
-    documents = [doc for doc in documents if doc['id'] != document_id]
+    document = documents[document_index]
+    
+    # Delete file
+    file_path = UPLOAD_DIR / document["stored_filename"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Remove from database
+    documents.pop(document_index)
     save_documents(documents)
     
-    # Delete file if exists
-    try:
-        file_path = Path(document.get('extracted_data', {}).get('File Path', ''))
-        if file_path.exists():
-            file_path.unlink()
-    except Exception as e:
-        print(f"Error deleting file: {e}")
-    
-    return JSONResponse(content={
-        "status": "success",
-        "message": "Document deleted successfully"
-    })
+    return {"status": "success", "message": "Document deleted successfully"}
 
-@app.post("/documents/{document_id}/chat")
-async def chat_with_document(document_id: str, request: ChatRequest, current_user: dict = Depends(get_current_user)):
-    """Chat with a document using Gemini AI to extract information"""
+@app.get("/documents/{document_id}/download")
+async def download_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Download original PDF file"""
     documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    document = next((doc for doc in documents if doc["id"] == document_id), None)
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Get the document's text content
-    file_path = UPLOAD_DIR / document.get('stored_filename', document['filename'])
+    file_path = UPLOAD_DIR / document["stored_filename"]
     if not file_path.exists():
-        file_path = UPLOAD_DIR / document['filename']
+        raise HTTPException(status_code=404, detail="File not found")
     
+    return FileResponse(
+        path=file_path,
+        filename=document["original_filename"],
+        media_type="application/pdf"
+    )
+
+@app.post("/documents/{document_id}/extract")
+async def extract_field(
+    document_id: str,
+    request: FieldExtractionRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Extract specific field from document using AI"""
+    documents = load_documents()
+    document = next((doc for doc in documents if doc["id"] == document_id), None)
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Load PDF content
+    file_path = UPLOAD_DIR / document["stored_filename"]
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Document file not found")
+        raise HTTPException(status_code=404, detail="File not found")
     
     try:
         with open(file_path, 'rb') as f:
             content = f.read()
-        document_text = extract_text_from_pdf(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading document: {str(e)}")
-      # Create prompt for Gemini
-    prompt = f"""
-    You are an expert at analyzing engineering documents, particularly P&ID (Process and Instrumentation Diagrams) and technical datasheets.
-    
-    Document content:
-    {document_text}
-    
-    User question: {request.message}
-    
-    Important: If the user is asking to extract a field, extract ONLY ONE field. Provide a helpful response and if extracting a field, 
-    provide the extracted information in a clear format.
-    
-    If you extract a field, the response should clearly identify the field name and its value.
-    """
-    
-    try:
+        
+        text = extract_text_from_pdf(content)
+        
+        # Use AI to extract specific field
+        prompt = f"""
+        Extract the "{request.field_name}" from the following PDF text.
+        Provide only the extracted value, no explanation.
+        
+        Text:
+        {text[:5000]}  # Limit text to avoid token limits
+        """
+        
         response = model.generate_content(prompt)
-        ai_response = response.text
-          # Check if user is asking to extract a specific field
-        extracted_fields = None
-        if any(keyword in request.message.lower() for keyword in ['extract', 'find', 'get', 'show me']):
-            extracted_fields = extract_single_field_with_ai(document_text, request.message)
+        extracted_value = response.text.strip()
         
-        return JSONResponse(content={
-            "status": "success",
-            "response": ai_response,
-            "extracted_fields": extracted_fields
-        })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
-
-@app.post("/documents/{document_id}/extract-field")
-async def extract_field(document_id: str, request: FieldExtractionRequest, admin_user: dict = Depends(require_admin)):
-    """Extract a specific field from a document and add it to the extracted data (Admin only)"""
-    documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
-    
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    # Get the document's text content
-    file_path = UPLOAD_DIR / document.get('stored_filename', document['filename'])
-    if not file_path.exists():
-        file_path = UPLOAD_DIR / document['filename']
-    
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Document file not found")
-    
-    try:
-        with open(file_path, 'rb') as f:
-            content = f.read()
-        document_text = extract_text_from_pdf(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading document: {str(e)}")
-    
-    # Use AI to extract the specific field
-    try:
-        field_value = extract_field_with_ai(document_text, f"Extract the field '{request.field_name}' from this document")
-        
-        # Update the document's extracted data
-        if 'extracted_data' not in document:
-            document['extracted_data'] = {}
-        
-        document['extracted_data'][request.field_name] = field_value
-        
-        # Save the updated document
-        for i, doc in enumerate(documents):
-            if doc['id'] == document_id:
-                documents[i] = document
-                break
-        
+        # Update document
+        document["extracted_data"][request.field_name] = extracted_value
         save_documents(documents)
         
-        return JSONResponse(content={
+        return {
             "status": "success",
-            "message": f"Field '{request.field_name}' extracted successfully",
             "field_name": request.field_name,
-            "field_value": field_value
-        })
+            "extracted_value": extracted_value
+        }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error extracting field: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract field: {str(e)}")
 
 @app.delete("/documents/{document_id}/fields/{field_name}")
-async def delete_field(document_id: str, field_name: str):
-    """Delete a specific field from a document's extracted data"""
+async def delete_field(
+    document_id: str,
+    field_name: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete specific field from document"""
     documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
+    document = next((doc for doc in documents if doc["id"] == document_id), None)
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    if 'extracted_data' not in document or field_name not in document['extracted_data']:
-        raise HTTPException(status_code=404, detail="Field not found")
+    if field_name in document["extracted_data"]:
+        del document["extracted_data"][field_name]
+        save_documents(documents)
+        return {"status": "success", "message": "Field deleted successfully"}
     
-    # Remove the field
-    del document['extracted_data'][field_name]
-    
-    # Save the updated document
-    for i, doc in enumerate(documents):
-        if doc['id'] == document_id:
-            documents[i] = document
-            break
-    
-    save_documents(documents)
-    
-    return JSONResponse(content={
-        "status": "success",
-        "message": f"Field '{field_name}' deleted successfully"
-    })
+    raise HTTPException(status_code=404, detail="Field not found")
 
-@app.put("/documents/{document_id}/fields")
-async def update_document_fields(document_id: str, request: UpdateDocumentFieldsRequest, admin_user: dict = Depends(require_admin)):
-    """Update the extracted data fields for a document (Admin only)"""
-    documents = load_documents()
-    document = next((doc for doc in documents if doc['id'] == document_id), None)
-    
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    # Update the document's extracted data
-    if 'extracted_data' not in document:
-        document['extracted_data'] = {}
-    
-    document['extracted_data'].update(request.extracted_data)
-    
-    # Save the updated document
-    for i, doc in enumerate(documents):
-        if doc['id'] == document_id:
-            documents[i] = document
-            break
-    
-    save_documents(documents)
-    
-    return JSONResponse(content={
-        "status": "success",
-        "message": "Document fields updated successfully"
-    })
+@app.get("/settings")
+async def get_settings(current_user: dict = Depends(get_current_user)):
+    """Get application settings"""
+    settings = load_settings()
+    return settings
 
-def extract_field_with_ai(document_text: str, query: str) -> str:
-    """Use Gemini AI to extract specific field information"""
-    prompt = f"""
-    You are an expert at extracting specific information from engineering documents.
-    
-    Document content:
-    {document_text}
-    
-    Task: {query}
-    
-    Please extract the requested information from the document. If the information is not available, 
-    clearly state that it was not found. Provide only the extracted value without additional explanation.
-    """
-    
+@app.post("/settings")
+async def update_settings(
+    request: SettingsRequest,
+    current_user: dict = Depends(require_admin)
+):
+    """Update application settings (admin only)"""
+    settings = load_settings()
+    settings["ai_model_name"] = request.ai_model_name
+    save_settings(settings)
+    return {"status": "success", "message": "Settings updated successfully"}
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Datasheet API endpoints
+
+@app.get("/datasheets/")
+async def get_datasheets(current_user: dict = Depends(get_current_user)):
+    """Get all processed datasheets"""
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        # Load datasheet index
+        datasheet_index_path = "datasheet_index.json"
+        if not os.path.exists(datasheet_index_path):
+            return []
+        
+        with open(datasheet_index_path, 'r') as f:
+            index_data = json.load(f)
+        
+        datasheets = []
+        for datasheet_id, info in index_data.get("datasheets", {}).items():
+            # Load the actual datasheet file
+            datasheet_file = f"datasheets/{datasheet_id}.json"
+            if os.path.exists(datasheet_file):
+                with open(datasheet_file, 'r') as f:
+                    datasheet_data = json.load(f)
+                    
+                # Combine index info with datasheet data
+                datasheet_info = {
+                    "id": datasheet_id,
+                    "equipment_name": info.get("equipment_name", "Unknown"),
+                    "document_id": info.get("document_id", ""),
+                    "pages": info.get("pages", ""),
+                    "created_at": info.get("created_at", ""),
+                    "content": datasheet_data.get("content", {}),
+                    "extracted_data": datasheet_data.get("extracted_data", {})
+                }
+                datasheets.append(datasheet_info)
+        
+        return datasheets
+        
     except Exception as e:
-        return f"Error extracting field: {str(e)}"
+        raise HTTPException(status_code=500, detail=f"Failed to load datasheets: {str(e)}")
 
-@app.post("/chat")
-async def chat_with_all_documents(request: ChatRequest, current_user: dict = Depends(get_current_user)):
-    """Chat with all documents using their extracted data"""
-    documents = load_documents()
-    
-    if not documents:
-        return JSONResponse(content={
-            "status": "success",
-            "response": "No documents have been uploaded yet. Please upload some documents first to start chatting.",
-            "extracted_fields": None
-        })
-    
-    # Collect all extracted data from all documents
-    all_extracted_data = {}
-    document_summaries = []
-    
-    for doc in documents:
-        extracted_data = doc.get('extracted_data', {})
-        if extracted_data:
-            all_extracted_data[doc['filename']] = extracted_data
+@app.get("/datasheets/{datasheet_id}")
+async def get_datasheet(
+    datasheet_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get specific datasheet by ID"""
+    try:
+        datasheet_file = f"datasheets/{datasheet_id}.json"
+        if not os.path.exists(datasheet_file):
+            raise HTTPException(status_code=404, detail="Datasheet not found")
+        
+        with open(datasheet_file, 'r') as f:
+            datasheet_data = json.load(f)
+        
+        return datasheet_data
+        
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Datasheet not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load datasheet: {str(e)}")
+
+@app.delete("/datasheets/{datasheet_id}")
+async def delete_datasheet(
+    datasheet_id: str,
+    current_user: dict = Depends(require_admin)
+):
+    """Delete a datasheet (admin only)"""
+    try:
+        # Delete datasheet file
+        datasheet_file = f"datasheets/{datasheet_id}.json"
+        if os.path.exists(datasheet_file):
+            os.remove(datasheet_file)
+        
+        # Update datasheet index
+        datasheet_index_path = "datasheet_index.json"
+        if os.path.exists(datasheet_index_path):
+            with open(datasheet_index_path, 'r') as f:
+                index_data = json.load(f)
             
-        # Create a summary for each document
-        summary = {
-            'filename': doc['filename'],
-            'upload_date': doc.get('upload_date', ''),
-            'extracted_fields_count': len(extracted_data),
-            'key_fields': list(extracted_data.keys())[:5] if extracted_data else []
-        }
-        document_summaries.append(summary)
-    
-    # Create prompt for Gemini with all available data
-    extracted_data_text = ""
-    for filename, data in all_extracted_data.items():
-        extracted_data_text += f"\n\nDocument: {filename}\n"
-        for key, value in data.items():
-            extracted_data_text += f"- {key}: {value}\n"
-    
-    prompt = f"""
-    You are an expert assistant for analyzing engineering documents and extracted data. You have access to data extracted from multiple uploaded documents.
-    
-    Available documents and their extracted data:
-    {extracted_data_text}
-    
-    Document summaries:
-    {json.dumps(document_summaries, indent=2)}
-    
-    User question: {request.message}
-    
-    Please provide a helpful response based on the available extracted data from all documents. You can:
-    1. Answer questions about specific fields or values
-    2. Compare data across different documents
-    3. Provide summaries or insights
-    4. Help find specific information
-    5. Explain technical details found in the documents
-    
-    If the user asks about something not available in the extracted data, let them know what information IS available.
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        ai_response = response.text
+            # Remove from datasheets
+            if datasheet_id in index_data.get("datasheets", {}):
+                del index_data["datasheets"][datasheet_id]
+            
+            # Update document datasheet list
+            document_id = None
+            for doc_id, doc_info in index_data.get("documents", {}).items():
+                if datasheet_id in doc_info.get("datasheet_ids", []):
+                    doc_info["datasheet_ids"].remove(datasheet_id)
+                    doc_info["total_datasheets"] = len(doc_info["datasheet_ids"])
+                    document_id = doc_id
+                    break
+            
+            with open(datasheet_index_path, 'w') as f:
+                json.dump(index_data, f, indent=2)
         
-        # Check if user is asking to extract or find specific information
-        extracted_fields = None
-        if any(keyword in request.message.lower() for keyword in ['extract', 'find', 'get', 'show me', 'list', 'what are']):
-            # Find relevant data based on the question
-            extracted_fields = find_relevant_data(all_extracted_data, request.message)
-        
-        return JSONResponse(content={
-            "status": "success",
-            "response": ai_response,
-            "extracted_fields": extracted_fields
-        })
+        return {"status": "success", "message": "Datasheet deleted successfully"}
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete datasheet: {str(e)}")
 
-def find_relevant_data(all_extracted_data: dict, question: str) -> dict:
-    """Find data relevant to the user's question from all documents"""
-    relevant_data = {}
-    question_lower = question.lower()
-    
-    # Keywords to search for in the question
-    keywords = question_lower.split()
-    
-    for document, data in all_extracted_data.items():
-        for field, value in data.items():
-            # Check if any keyword matches the field name or value
-            if any(keyword in field.lower() or keyword in str(value).lower() for keyword in keywords):
-                if document not in relevant_data:
-                    relevant_data[document] = {}
-                relevant_data[document][field] = value
-    
-    return relevant_data if relevant_data else None
-
-@app.get("/documents/{document_id}/chat-history")
-async def get_chat_history(document_id: str, current_user: dict = Depends(get_current_user)):
-    """Get chat history for a specific document"""
-    chat_history = load_chat_history()
-    document_chat = chat_history.get(document_id, [])
-    
-    return JSONResponse(content={
-        "status": "success",
-        "messages": document_chat
-    })
-
-@app.post("/documents/{document_id}/save-chat")
-async def save_document_chat_history(document_id: str, request: SaveChatHistoryRequest, current_user: dict = Depends(get_current_user)):
-    """Save chat history for a specific document"""
-    chat_history = load_chat_history()
-    
-    # Convert Pydantic models to dict
-    messages_dict = [msg.dict() for msg in request.messages]
-    chat_history[document_id] = messages_dict
-    
-    save_chat_history(chat_history)
-    
-    return JSONResponse(content={
-        "status": "success",
-        "message": "Chat history saved successfully"
-    })
-
-@app.get("/tags/stats")
-async def get_tag_stats(current_user: dict = Depends(get_current_user)):
-    """Get tag extraction statistics"""
+@app.post("/datasheets/process/")
+async def process_document_to_datasheets(
+    request: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Process a document to extract individual datasheets"""
     try:
-        stats = get_tag_extraction_stats()
-        return JSONResponse(content={
-            "status": "success",
-            "stats": stats
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting tag stats: {str(e)}")
-
-@app.get("/documents/{document_id}/tags")
-async def get_document_tags(document_id: str, current_user: dict = Depends(get_current_user)):
-    """Get extracted tags for a specific document"""
-    try:
+        document_id = request.get("document_id")
+        if not document_id:
+            raise HTTPException(status_code=400, detail="Document ID is required")
+        
+        # Find the document
         documents = load_documents()
-        document = next((doc for doc in documents if doc['id'] == document_id), None)
-        
-        if not document:
-            raise HTTPException(status_code=404, detail="Document not found")
-        
-        # Get tags from the tag extraction result
-        tag_result = document.get('tag_extraction_result', {})
-        extracted_tags = get_extracted_tags_for_file(document['filename'])
-        
-        return JSONResponse(content={
-            "status": "success",
-            "document_id": document_id,
-            "filename": document['filename'],
-            "tag_extraction_result": tag_result,
-            "detailed_tags": extracted_tags
-        })
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting document tags: {str(e)}")
-
-@app.post("/documents/{document_id}/reprocess-tags")
-async def reprocess_document_tags(document_id: str, admin_user: dict = Depends(require_admin)):
-    """Reprocess tag extraction for a specific document (Admin only)"""
-    try:
-        documents = load_documents()
-        document = next((doc for doc in documents if doc['id'] == document_id), None)
+        document = next((doc for doc in documents if doc["id"] == document_id), None)
         
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
         
         # Get the file path
-        file_path = UPLOAD_DIR / document.get('stored_filename', document['filename'])
-        
+        file_path = UPLOAD_DIR / document["stored_filename"]
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="PDF file not found on disk")
+            raise HTTPException(status_code=404, detail="File not found")
         
-        # Read file content
-        with open(file_path, "rb") as f:
-            content = f.read()
+        # Process the document with datasheet splitter
+        result = datasheet_splitter(str(file_path))
         
-        # Reprocess tags
-        tag_extraction_result = process_pdf_for_tags(content, document['filename'])
+        # Load the generated datasheets
+        datasheet_index_path = "datasheet_index.json"
+        if os.path.exists(datasheet_index_path):
+            with open(datasheet_index_path, 'r') as f:
+                index_data = json.load(f)
+            
+            processed_datasheets = []
+            doc_key = f"doc_{document_id}_{document['filename'].replace('.pdf', '')}"
+            
+            if doc_key in index_data.get("documents", {}):
+                datasheet_ids = index_data["documents"][doc_key]["datasheet_ids"]
+                
+                for datasheet_id in datasheet_ids:
+                    datasheet_file = f"datasheets/{datasheet_id}.json"
+                    if os.path.exists(datasheet_file):
+                        with open(datasheet_file, 'r') as f:
+                            datasheet_data = json.load(f)
+                        processed_datasheets.append(datasheet_data)
         
-        # Update document with new tag extraction result
-        document['tag_extraction_result'] = tag_extraction_result
-        
-        # Update extracted data with new tag information
-        if tag_extraction_result["status"] == "success":
-            document['extracted_data'].update({
-                'Extracted Tags': ', '.join(tag_extraction_result["tags"]),
-                'Number of Tags': str(len(tag_extraction_result["tags"])),
-                'New Acronyms Found': ', '.join(tag_extraction_result["new_acronyms"]),
-                'Tag Extraction Status': 'Success'
-            })
-        else:
-            document['extracted_data'].update({
-                'Tag Extraction Status': tag_extraction_result["status"],
-                'Tag Extraction Message': tag_extraction_result["message"]
-            })
-        
-        # Save updated documents
-        save_documents(documents)
-        
-        return JSONResponse(content={
+        return {
             "status": "success",
-            "message": "Tag extraction reprocessed successfully",
-            "tag_extraction_result": tag_extraction_result
-        })
+            "message": f"Successfully processed {len(processed_datasheets)} datasheets",
+            "datasheets": processed_datasheets
+        }
         
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reprocessing tags: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+
+@app.post("/datasheets/{datasheet_id}/chat")
+async def chat_with_datasheet(
+    datasheet_id: str,
+    request: DatasheetChatRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Chat with AI about a specific datasheet"""
+    try:
+        # Load datasheet
+        datasheet_file = f"datasheets/{datasheet_id}.json"
+        if not os.path.exists(datasheet_file):
+            raise HTTPException(status_code=404, detail="Datasheet not found")
+        
+        with open(datasheet_file, 'r') as f:
+            datasheet_data = json.load(f)
+        
+        # Prepare context for AI
+        context = f"""
+        Datasheet ID: {datasheet_id}
+        Equipment Name: {datasheet_data.get('equipment_name', 'Unknown')}
+        
+        Content: {datasheet_data.get('content', {}).get('text', '')[:5000]}
+        
+        Extracted Data: {json.dumps(datasheet_data.get('extracted_data', {}), indent=2)}
+        """
+        
+        # Generate AI response
+        prompt = f"""
+        You are an expert in analyzing technical datasheets. Based on the following datasheet content, please answer the user's question.
+        
+        {context}
+        
+        User Question: {request.message}
+        
+        Please provide a detailed and technical response based on the datasheet content.
+        """
+        
+        response = model.generate_content(prompt)
+        
+        return DatasheetChatResponse(
+            response=response.text,
+            datasheet_id=datasheet_id,
+            equipment_name=datasheet_data.get('equipment_name', 'Unknown')
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process chat: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
